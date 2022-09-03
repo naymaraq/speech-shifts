@@ -33,7 +33,7 @@ def remove_bad_speakers(collection):
                     new_collection[key][label] = collection[key][label]
     return new_collection
 
-def remove_dublicate_trials(trials):
+def remove_duplicate_trials(trials):
     bag = set()
     unique_trials = []
     for y, p0, p1 in trials:
@@ -85,7 +85,7 @@ def get_trials(data, hard, n_trials):
         
         trials.append((y, pair[0], pair[1]))
 
-    unique_trials = remove_dublicate_trials(trials)
+    unique_trials = remove_duplicate_trials(trials)
     unique_trials = [(y, rel_path(a1["audio_filepath"]), rel_path(a2["audio_filepath"])) 
                         for y, a1, a2 in unique_trials
                     ]
