@@ -1,5 +1,6 @@
 import json
 
+
 def read_manifest(manifest_filepath):
     samples = []
     with open(manifest_filepath, 'r') as f:

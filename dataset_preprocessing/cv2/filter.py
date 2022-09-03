@@ -1,7 +1,5 @@
-import json
-import sys
 import os
-from tqdm import tqdm
+
 from manifest_utils import read_manifest, write_manifest
 
 
@@ -40,4 +38,3 @@ def filter_out(data_manifest_paths, min_dur, max_dur, lang, out_folder):
         path = manifest_path.replace(".json", f"-{lang}.json")
         path = os.path.join(out_folder, os.path.split(path)[1])
         write_manifest(filtered_data, path)
-        
