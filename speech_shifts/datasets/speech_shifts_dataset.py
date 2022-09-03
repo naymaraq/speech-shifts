@@ -1,0 +1,185 @@
+import numpy as np
+
+class SpeechShiftsDataset:
+    DEFAULT_SPLITS = {'train': 0, 'val': 1, 'test': 2}
+    DEFAULT_SPLIT_NAMES = {'train': 'Train', 'val': 'Validation', 'test': 'Test'}
+    
+    @property
+    def n_classes(self):
+        """
+        Number of classes for single-task classification datasets.
+        Used for logging and to configure models to produce appropriately-sized output.
+        None by default.
+        Leave as None if not applicable (e.g., regression or multi-task classification).
+        """
+        return getattr(self, '_n_classes', None)
+    
+    @property
+    def y_array(self):
+        """
+        A Tensor of targets (e.g., labels for classification tasks),
+        with y_array[i] representing the target of the i-th data point.
+        y_array[i] can contain multiple elements.
+        """
+        return self._y_array
+
+    @property
+    def y_size(self):
+        """
+        The number of dimensions/elements in the target, i.e., len(y_array[i]).
+        For standard classification/regression tasks, y_size = 1.
+        For multi-task or structured prediction settings, y_size > 1.
+        Used for logging and to configure models to produce appropriately-sized output.
+        """
+        return self._y_size
+
+    @property
+    def dataset_name(self):
+        """
+        A string that identifies the dataset.
+        """
+        return self._dataset_name
+    
+    @property
+    def metadata_fields(self):
+        """
+        A list of strings naming each column of the metadata table.
+        Must include 'y'.
+        """
+        return self._metadata_fields
+    
+    @property
+    def metadata_array(self):
+        """
+        A Tensor of metadata, with the i-th row representing the metadata associated with
+        the i-th data point. The columns correspond to the metadata_fields defined above.
+        """
+        return self._metadata_array
+
+    @property
+    def metadata_map(self):
+        """
+        An optional dictionary that, for each metadata field, contains a list that maps from
+        integers (in metadata_array) to a string representing what that integer means.
+        This is only used for logging, so that we print out more intelligible metadata values.
+        Each key must be in metadata_fields.
+        """
+        return getattr(self, '_metadata_map', None)
+    
+    @property
+    def split_dict(self):
+        """
+        A dictionary mapping splits to integer identifiers (used in split_array),
+        e.g., {'train': 0, 'val': 1, 'test': 2}.
+        Keys should match up with split_names.
+        """
+        return getattr(self, '_split_dict', SpeechShiftsDataset.DEFAULT_SPLITS)
+
+    @property
+    def split_names(self):
+        """
+        A dictionary mapping splits to their pretty names,
+        e.g., {'train': 'Train', 'val': 'Validation', 'test': 'Test'}.
+        Keys should match up with split_dict.
+        """
+        return getattr(self, '_split_names', SpeechShiftsDataset.DEFAULT_SPLIT_NAMES)
+    
+    @property
+    def split_array(self):
+        """
+        An array of integers, with split_array[i] representing what split the i-th data point
+        belongs to.
+        """
+        return self._split_array
+    
+    @property
+    def collate(self):
+        """
+        Torch function to collate items in a batch.
+        By default returns None -> uses default torch collate.
+        """
+        return getattr(self, '_collate', None)
+     
+    def get_input(self, idx):
+        """
+        Args:
+            - idx (int): Index of a data point
+        Output:
+            - x (Tensor): Input features of the idx-th data point
+        """
+        raise NotImplementedError
+    
+    def get_subset(self, split, frac=1.0, transform=None):
+        """
+        Args:
+            - split (str): Split identifier, e.g., 'train', 'val', 'test'.
+                           Must be in self.split_dict.
+            - frac (float): What fraction of the split to randomly sample.
+                            Used for fast development on a small dataset.
+            - transform (function): Any data transformations to be applied to the input x.
+        Output:
+            - subset (SpeechShiftsSubset): A (potentially subsampled) subset of the SpeechShiftsSubset.
+        """
+        if split not in self.split_dict:
+            raise ValueError(f"Split {split} not found in dataset's split_dict.")
+
+        split_mask = self.split_array == self.split_dict[split]
+        split_idx = np.where(split_mask)[0]
+
+        if frac < 1.0:
+            # Randomly sample a fraction of the split
+            num_to_retain = int(np.round(float(len(split_idx)) * frac))
+            split_idx = np.sort(np.random.permutation(split_idx)[:num_to_retain])
+
+        return SpeechShiftsSubset(self, split_idx, transform)
+
+    def __getitem__(self, idx):
+
+        x = self.get_input(idx)
+        y = self.y_array[idx]
+        metadata = self.metadata_array[idx]
+        return x, y, metadata
+
+    def __len__(self):
+        return len(self.y_array)
+
+class SpeechShiftsSubset(SpeechShiftsDataset):
+    def __init__(self, dataset, indices, transform, do_transform_y=False):
+
+        self.dataset = dataset
+        self.indices = indices
+        inherited_attrs = ['_dataset_name', '_data_dir', '_collate',
+                           '_split_dict', '_split_names',
+                           '_y_size', '_n_classes',
+                           '_metadata_fields', '_metadata_map']
+        
+        for attr_name in inherited_attrs:
+            if hasattr(dataset, attr_name):
+                setattr(self, attr_name, getattr(dataset, attr_name))
+        
+        self.transform = transform
+        self.do_transform_y = do_transform_y
+
+    def __getitem__(self, idx):
+        x, y, metadata = self.dataset[self.indices[idx]]
+        if self.transform is not None:
+            if self.do_transform_y:
+                x, y = self.transform(x, y)
+            else:
+                x = self.transform(x)
+        return x, y, metadata
+
+    def __len__(self):
+        return len(self.indices)
+
+    @property
+    def split_array(self):
+        return self.dataset._split_array[self.indices]
+
+    @property
+    def y_array(self):
+        return self.dataset._y_array[self.indices]
+
+    @property
+    def metadata_array(self):
+        return self.dataset.metadata_array[self.indices]
