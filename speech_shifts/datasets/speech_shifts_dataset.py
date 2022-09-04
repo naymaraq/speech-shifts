@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 
 class SpeechShiftsDataset:
@@ -134,7 +135,6 @@ class SpeechShiftsDataset:
         return SpeechShiftsSubset(self, split_idx, transform)
 
     def __getitem__(self, idx):
-
         x = self.get_input(idx)
         y = self.y_array[idx]
         metadata = self.metadata_array[idx]
@@ -143,12 +143,48 @@ class SpeechShiftsDataset:
     def __len__(self):
         return len(self.y_array)
 
+    def __init__(self, data_dir):
+        self.data_dir = data_dir
+        self.check_init()
+    
+    def check_init(self):
+        required_attrs = ['_dataset_name',
+                          '_split_array',
+                          '_y_array', '_y_size',
+                          '_metadata_fields', '_metadata_array']
+        for attr_name in required_attrs:
+            assert hasattr(self, attr_name), f'WILDSDataset is missing {attr_name}.'
+
+
+        # Check splits
+        assert self.split_dict.keys()==self.split_names.keys()
+        assert 'train' in self.split_dict
+        assert 'val' in self.split_dict
+
+        # Check the form of the required arrays
+        assert (isinstance(self.y_array, torch.Tensor) or isinstance(self.y_array, list))
+        assert isinstance(self.metadata_array, torch.Tensor), 'metadata_array must be a torch.Tensor'
+
+        # Check that dimensions match
+        assert len(self.y_array) == len(self.metadata_array)
+        assert len(self.split_array) == len(self.metadata_array)
+
+        # Check metadata
+        assert len(self.metadata_array.shape) == 2
+        assert len(self.metadata_fields) == self.metadata_array.shape[1]
+
+        # For convenience, include y in metadata_fields if y_size == 1
+        if self.y_size == 1:
+            assert 'y' in self.metadata_fields
+        
+
 class SpeechShiftsSubset(SpeechShiftsDataset):
+
     def __init__(self, dataset, indices, transform, do_transform_y=False):
 
         self.dataset = dataset
         self.indices = indices
-        inherited_attrs = ['_dataset_name', '_data_dir', '_collate',
+        inherited_attrs = ['_dataset_name', '_collate',
                            '_split_dict', '_split_names',
                            '_y_size', '_n_classes',
                            '_metadata_fields', '_metadata_map']
