@@ -32,7 +32,7 @@ class MLSRDataset(SpeechShiftsDataset):
             'test': 'Test',
             'val': 'Validation (OOD)',
         }
-        for split in ["train", "val", "test", "id_val"]:
+        for split in self.split_dict:
             metadata.loc[(metadata["split"] == split), "split"] = self.split_dict[split]
         self._split_array = metadata['split'].values
 

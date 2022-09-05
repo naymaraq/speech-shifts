@@ -1,4 +1,30 @@
 import torch
+import torch_scatter
+import numpy as np
+
+def numel(obj):
+    if torch.is_tensor(obj):
+        return obj.numel()
+    elif isinstance(obj, list):
+        return len(obj)
+    else:
+        raise TypeError("Invalid type for numel")
+
+def avg_over_groups(v, g, n_groups):
+    """
+    Args:
+        v (Tensor): Vector containing the quantity to average over.
+        g (Tensor): Vector of the same length as v, containing group information.
+    Returns:
+        group_avgs (Tensor): Vector of length num_groups
+        group_counts (Tensor)
+    """
+    
+    assert v.device==g.device
+    assert v.numel()==g.numel()
+    group_count = get_counts(g, n_groups)
+    group_avgs = torch_scatter.scatter(src=v, index=g, dim_size=n_groups, reduce='mean')
+    return group_avgs, group_count
 
 def get_counts(g, n_groups):
     """
@@ -15,3 +41,37 @@ def get_counts(g, n_groups):
     counts = torch.zeros(n_groups, device=g.device)
     counts[unique_groups] = unique_counts.float()
     return counts
+
+def minimum(numbers, empty_val=0.):
+    if isinstance(numbers, torch.Tensor):
+        if numbers.numel()==0:
+            return torch.tensor(empty_val, device=numbers.device)
+        else:
+            return numbers[~torch.isnan(numbers)].min()
+    elif isinstance(numbers, np.ndarray):
+        if numbers.size==0:
+            return np.array(empty_val)
+        else:
+            return np.nanmin(numbers)
+    else:
+        if len(numbers)==0:
+            return empty_val
+        else:
+            return min(numbers)
+
+def maximum(numbers, empty_val=0.):
+    if isinstance(numbers, torch.Tensor):
+        if numbers.numel()==0:
+            return torch.tensor(empty_val, device=numbers.device)
+        else:
+            return numbers[~torch.isnan(numbers)].max()
+    elif isinstance(numbers, np.ndarray):
+        if numbers.size==0:
+            return np.array(empty_val)
+        else:
+            return np.nanmax(numbers)
+    else:
+        if len(numbers)==0:
+            return empty_val
+        else:
+            return max(numbers)
