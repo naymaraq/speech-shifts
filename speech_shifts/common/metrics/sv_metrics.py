@@ -1,3 +1,4 @@
+import torch
 from sklearn.metrics import roc_curve
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq
@@ -20,7 +21,9 @@ class EqualErrorRate(Metric):
         
         fpr, tpr, _ = roc_curve(y_true, y_pred)
         eer = brentq(lambda x: 1.0 - x - interp1d(fpr, tpr)(x), 0.0, 1.0)
-        return eer 
+        if not isinstance(eer, torch.Tensor):
+            eer = torch.tensor(eer)
+        return eer
     
     def worst(self, metrics):
         return maximum(metrics)
@@ -49,6 +52,8 @@ class DCF(Metric):
         mindcf, threshold = DCF.compute_min_dcf(
         fnrs, fprs, thresholds, self.p_target, self.c_miss, self.c_fa
         )
+        if not isinstance(mindcf, torch.Tensor):
+            mindcf = torch.tensor(mindcf)
         return mindcf
 
     def worst(self, metrics):

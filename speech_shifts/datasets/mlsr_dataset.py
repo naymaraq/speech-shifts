@@ -121,8 +121,3 @@ def _fixed_seq_collate_fn(batch):
     metadata = torch.stack(metadata)
     return audio_signal, audio_lengths, labels, metadata
 
-if __name__ == "__main__":
-
-    d = MLSRDataset("/home/tsargsyan/davit/voxsrc22/dg-sr/cv-corpus-wav")
-    train = d.get_subset_by_duration("train", min_dur=5, max_dur=10)
-

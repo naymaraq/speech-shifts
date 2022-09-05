@@ -1,6 +1,7 @@
 import torch
-import torch_scatter
 import numpy as np
+
+import speech_shifts.common.torch_scatter as torch_scatter
 
 def numel(obj):
     if torch.is_tensor(obj):
