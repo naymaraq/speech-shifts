@@ -174,6 +174,30 @@ def remove_unused_files(data, trials):
 
     return new_data
 
+def sep_train_from_id_val(data, trials):
+    train_data, id_val_data = [], []
+    used_files = set()
+    for _, p1, p2 in trials:
+        used_files |= set([p1, p2])
+    
+    for sample in data:
+        p = sample["audio_filepath"]
+        p = rel_path(p)
+        if p in used_files:
+            id_val_data.append(sample)
+        else:
+            train_data.append(sample)
+    
+    id_val_speakers = set([item["speaker"] for item in id_val_data])
+    new_train_data = []
+    for item in train_data:
+        sp = item["speaker"]
+        if sp not in id_val_speakers:
+            new_train_data.append(item)
+
+    return new_train_data, id_val_data
+
+
 def save_trials(trials, trials_path):
     with open(trials_path, "w") as f:
         for y, p1, p2, lang, split in trials:
@@ -207,14 +231,22 @@ if __name__ == "__main__":
         for manifest_path in filtered_jsons:
             filtered_data.extend(read_manifest(manifest_path))
         
-        trials = get_trials(filtered_data, hard=True, n_trials=10000)
-        trials = trials[:5000]
         if split in ["test", "val"]:
             trials = get_trials(filtered_data, hard=True, n_trials=50000)
             trials = trials[:30000]
             filtered_data = remove_unused_files(filtered_data, trials)
-
-        joined_trials.extend([(*trial, lang, split) for trial in trials])
+            trial_split = split
+        else:
+            trials = get_trials(filtered_data, hard=True, n_trials=10000)
+            trials = trials[:5000]
+            trial_split = "id_val"
+            filtered_data, id_val_data = sep_train_from_id_val(filtered_data, trials)
+            for item in id_val_data:
+                item["split"] = trial_split
+                item["audio_filepath"] = rel_path(item["audio_filepath"])
+                joined_items.append(item)
+        
+        joined_trials.extend([(*trial, lang, trial_split) for trial in trials])
         for item in filtered_data:
             item["split"] = split
             item["audio_filepath"] = rel_path(item["audio_filepath"])

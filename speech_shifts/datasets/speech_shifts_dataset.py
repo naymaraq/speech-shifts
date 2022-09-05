@@ -94,6 +94,13 @@ class SpeechShiftsDataset:
         return self._split_array
     
     @property
+    def duration_array(self):
+        """
+        An array of floats, with duration_array[i] representing duration ofthe i-th data point.
+        """
+        return self._duration_array
+    
+    @property
     def collate(self):
         """
         Torch function to collate items in a batch.
@@ -134,6 +141,26 @@ class SpeechShiftsDataset:
 
         return SpeechShiftsSubset(self, split_idx, transform)
 
+    def get_subset_by_duration(self, split, min_dur=None, max_dur=None, transform=None):
+        if split not in self.split_dict:
+            raise ValueError(f"Split {split} not found in dataset's split_dict.")
+    
+        split_mask = self.split_array == self.split_dict[split]
+        split_idx = np.where(split_mask)[0]
+
+        if min_dur:
+            min_duration_mask = self._duration_array >= min_dur
+            min_dur_idx = np.where(min_duration_mask)[0]
+            split_idx = np.intersect1d(split_idx, min_dur_idx)
+        
+        if max_dur:
+            max_duration_mask = self._duration_array <= max_dur
+            max_dur_idx = np.where(max_duration_mask)[0]
+            split_idx = np.intersect1d(split_idx, max_dur_idx)
+
+        return SpeechShiftsSubset(self, split_idx, transform)
+
+
     def __getitem__(self, idx):
         x = self.get_input(idx)
         y = self.y_array[idx]
@@ -150,10 +177,10 @@ class SpeechShiftsDataset:
     def check_init(self):
         required_attrs = ['_dataset_name',
                           '_split_array',
-                          '_y_array', '_y_size',
+                          '_y_array', '_y_size', '_duration_array',
                           '_metadata_fields', '_metadata_array']
         for attr_name in required_attrs:
-            assert hasattr(self, attr_name), f'WILDSDataset is missing {attr_name}.'
+            assert hasattr(self, attr_name), f'{attr_name} is missing.'
 
 
         # Check splits
@@ -168,6 +195,7 @@ class SpeechShiftsDataset:
         # Check that dimensions match
         assert len(self.y_array) == len(self.metadata_array)
         assert len(self.split_array) == len(self.metadata_array)
+        assert len(self.duration_array) == len(self.metadata_array)
 
         # Check metadata
         assert len(self.metadata_array.shape) == 2
@@ -219,3 +247,7 @@ class SpeechShiftsSubset(SpeechShiftsDataset):
     @property
     def metadata_array(self):
         return self.dataset.metadata_array[self.indices]
+    
+    @property
+    def duration_array(self):
+        return self.dataset.duration_array[self.indices]
