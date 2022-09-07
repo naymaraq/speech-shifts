@@ -13,10 +13,21 @@ import unittest
 import torch
 from speech_shifts.datasets.mlsr_dataset import MLSRDataset
 from speech_shifts.common.metrics.sv_metrics import EqualErrorRate, DCF
+from speech_shifts.common.get_loaders import get_train_loader, get_eval_loader
 
 class MLSRDatasetTest(unittest.TestCase):
     root_dir = "/home/tsargsyan/davit/voxsrc22/dg-sr/cv-corpus-wav"
     
+    def test_dataloader(self):
+        d = MLSRDataset(self.root_dir)
+        val = d.get_subset("val")
+        val_loader  = get_eval_loader("standard",
+                                         val,
+                                         batch_size=20)
+        batch = next(iter(val_loader))
+        audio_signal, audio_lengths, labels, metadata, indices = batch
+        
+
     def test_mlsr(self):
         d = MLSRDataset(self.root_dir)
         val = d.get_subset("val")
@@ -40,8 +51,6 @@ class MLSRDatasetTest(unittest.TestCase):
         print("Number of files in val {}".format(len(v)))
         print("Number of files in id_val {}".format(len(i)))
         print("Number of files in test {}".format(len(t)))
-
-
 
         train_speakers = set(train.y_array)
         val_speakers = set(val.y_array)

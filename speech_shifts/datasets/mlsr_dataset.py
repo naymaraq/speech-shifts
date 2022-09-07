@@ -223,7 +223,7 @@ def _fixed_seq_collate_fn(batch):
         audio_signal.append(sig)
         labels.append(labels_i)
         metadata.append(meta)
-        indices.append(idx)
+        indices.append(torch.tensor(idx).long())
 
     audio_signal = torch.stack(audio_signal)
     audio_lengths = torch.stack(new_audio_lengths)
