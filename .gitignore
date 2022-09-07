@@ -5,4 +5,6 @@ data
 logs
 dist
 venv
+env
 .DS_Store
+speech_shifts.egg-info
