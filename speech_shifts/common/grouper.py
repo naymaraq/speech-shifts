@@ -54,10 +54,10 @@ class Grouper:
         raise NotImplementedError
 
 class CombinatorialGrouper(Grouper):
-    def __init__(self, dataset, groupby_fields):
+    def __init__(self, meta_fields, meta_map, meta_array, groupby_fields):
 
-        metadata_fields = dataset.metadata_fields
-        largest_metadata_map = copy.deepcopy(dataset.metadata_map)
+        metadata_fields = copy.deepcopy(meta_fields)
+        largest_metadata_map = copy.deepcopy(meta_map)
         self.groupby_fields = groupby_fields
 
         if groupby_fields is None:
@@ -67,7 +67,7 @@ class CombinatorialGrouper(Grouper):
             if len(self.groupby_field_indices) != len(self.groupby_fields):
                 raise ValueError('At least one group field not found in dataset.metadata_fields')
 
-            metadata_array = torch.clone(dataset.metadata_array)
+            metadata_array = torch.clone(meta_array)
             grouped_metadata = metadata_array[:, self.groupby_field_indices]
             
             if not isinstance(grouped_metadata, torch.LongTensor):

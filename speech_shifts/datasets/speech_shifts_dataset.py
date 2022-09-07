@@ -117,7 +117,7 @@ class SpeechShiftsDataset:
         """
         raise NotImplementedError
     
-    def get_subset(self, split, frac=1.0, transform=None):
+    def get_subset(self, split, frac=1.0, min_dur=None, max_dur=None, transform=None):
         """
         Args:
             - split (str): Split identifier, e.g., 'train', 'val', 'test'.
@@ -126,7 +126,7 @@ class SpeechShiftsDataset:
                             Used for fast development on a small dataset.
             - transform (function): Any data transformations to be applied to the input x.
         Output:
-            - subset (SpeechShiftsSubset): A (potentially subsampled) subset of the SpeechShiftsSubset.
+            - subset (SpeechShiftsSubset): A (potentially subsampled) subset of the SpeechShiftsDataset.
         """
         if split not in self.split_dict:
             raise ValueError(f"Split {split} not found in dataset's split_dict.")
@@ -138,28 +138,18 @@ class SpeechShiftsDataset:
             # Randomly sample a fraction of the split
             num_to_retain = int(np.round(float(len(split_idx)) * frac))
             split_idx = np.sort(np.random.permutation(split_idx)[:num_to_retain])
-
-        return SpeechShiftsSubset(self, split_idx, transform)
-
-    def get_subset_by_duration(self, split, min_dur=None, max_dur=None, transform=None):
-        if split not in self.split_dict:
-            raise ValueError(f"Split {split} not found in dataset's split_dict.")
-    
-        split_mask = self.split_array == self.split_dict[split]
-        split_idx = np.where(split_mask)[0]
-
+        
         if min_dur:
-            min_duration_mask = self._duration_array >= min_dur
+            min_duration_mask = self.duration_array >= min_dur
             min_dur_idx = np.where(min_duration_mask)[0]
             split_idx = np.intersect1d(split_idx, min_dur_idx)
         
         if max_dur:
-            max_duration_mask = self._duration_array <= max_dur
+            max_duration_mask = self.duration_array <= max_dur
             max_dur_idx = np.where(max_duration_mask)[0]
             split_idx = np.intersect1d(split_idx, max_dur_idx)
 
         return SpeechShiftsSubset(self, split_idx, transform)
-
 
     def __getitem__(self, idx):
         x = self.get_input(idx)
@@ -205,6 +195,59 @@ class SpeechShiftsDataset:
         if self.y_size == 1:
             assert 'y' in self.metadata_fields
         
+    @staticmethod
+    def standard_eval(metric, y_pred, y_true):
+        """
+        Args:
+            - metric (Metric): Metric to use for eval
+            - y_pred (Tensor): Predicted targets
+            - y_true (Tensor): True targets
+        Output:
+            - results (dict): Dictionary of results
+            - results_str (str): Pretty print version of the results
+        """
+        results = metric.compute(y_pred, y_true, return_dict=True)
+        results_str = (
+            f"Average {metric.name}: {results[metric.agg_metric_field]:.3f}\n"
+        )
+        return results, results_str
+
+    @staticmethod
+    def standard_group_eval(metric, grouper, y_pred, y_true, metadata, aggregate=True):
+        """
+        Args:
+            - metric (Metric): Metric to use for eval
+            - grouper (CombinatorialGrouper): Grouper object that converts metadata into groups
+            - y_pred (Tensor): Predicted targets
+            - y_true (Tensor): True targets
+            - metadata (Tensor): Metadata
+        Output:
+            - results (dict): Dictionary of results
+            - results_str (str): Pretty print version of the results
+        """
+        results, results_str = {}, ''
+        if aggregate:
+            results.update(metric.compute(y_pred, y_true))
+            results_str += f"Average {metric.name}: {results[metric.agg_metric_field]:.3f}\n"
+        
+        g = grouper.metadata_to_group(metadata)
+        group_results = metric.compute_group_wise(y_pred, y_true, g, grouper.n_groups)
+        for group_idx in range(grouper.n_groups):
+            group_str = grouper.group_field_str(group_idx)
+            group_metric = group_results[metric.group_metric_field(group_idx)]
+            group_counts = group_results[metric.group_count_field(group_idx)]
+            results[f'{metric.name}_{group_str}'] = group_metric
+            results[f'count_{group_str}'] = group_counts
+            if group_results[metric.group_count_field(group_idx)] == 0:
+                continue
+            results_str += (
+                f'  {grouper.group_str(group_idx)}  '
+                f"[n = {group_results[metric.group_count_field(group_idx)]:6.0f}]:\t"
+                f"{metric.name} = {group_results[metric.group_metric_field(group_idx)]:5.3f}\n")
+        results[f'{metric.worst_group_metric_field}'] = group_results[f'{metric.worst_group_metric_field}']
+        results_str += f"Worst-group {metric.name}: {group_results[metric.worst_group_metric_field]:.3f}\n"
+        return results, results_str
+
 
 class SpeechShiftsSubset(SpeechShiftsDataset):
 
@@ -235,7 +278,7 @@ class SpeechShiftsSubset(SpeechShiftsDataset):
 
     def __len__(self):
         return len(self.indices)
-
+    
     @property
     def split_array(self):
         return self.dataset._split_array[self.indices]
@@ -251,3 +294,39 @@ class SpeechShiftsSubset(SpeechShiftsDataset):
     @property
     def duration_array(self):
         return self.dataset.duration_array[self.indices]
+
+    def eval(self, y_pred, y_true, metadata, prediction_fn=None):
+        return self.dataset.eval(y_pred, y_true, metadata, prediction_fn)
+
+
+class SpeechShiftsSubsetWithTrials(SpeechShiftsSubset):
+
+    def __init__(self, dataset, indices, trial_indices, transform, do_transform_y=False):
+
+        self.trial_indices = trial_indices
+        inherited_trial_attrs = ['_trial_y_size', 
+                                 '_trial_n_classes',
+                                 '_trial_metadata_fields', 
+                                 '_trial_metadata_map']
+
+        for attr_name in inherited_trial_attrs:
+            if hasattr(dataset, attr_name):
+                setattr(self, attr_name, getattr(dataset, attr_name))
+        
+        super().__init__(dataset, indices, transform, do_transform_y)
+    
+    @property
+    def trial_split_array(self):
+        return self.dataset._trial_split_array[self.trial_indices]
+
+    @property
+    def trial_y_array(self):
+        return self.dataset._trial_y_array[self.trial_indices]
+
+    @property
+    def trial_metadata_array(self):
+        return self.dataset._trial_metadata_array[self.trial_indices]
+
+    @property
+    def input_trial_array(self):
+        return [self.dataset._input_trial_array[ix] for ix in self.trial_indices]

@@ -17,12 +17,31 @@ from speech_shifts.common.metrics.sv_metrics import EqualErrorRate, DCF
 class MLSRDatasetTest(unittest.TestCase):
     root_dir = "/home/tsargsyan/davit/voxsrc22/dg-sr/cv-corpus-wav"
     
-    def test_speaker_intersections(self):
+    def test_mlsr(self):
         d = MLSRDataset(self.root_dir)
-        train = d.get_subset("train")
         val = d.get_subset("val")
         id_val = d.get_subset("id_val")
         test = d.get_subset("test")
+        train = d.get_subset("train")
+
+        v = set([i[0] for i in val.input_trial_array] + [i[1] for i in val.input_trial_array])
+        v1 = set([val.dataset._input_array[ix] for ix in val.indices])
+
+        i = set([i[0] for i in id_val.input_trial_array] + [i[1] for i in id_val.input_trial_array])
+        i1 = set([id_val.dataset._input_array[ix] for ix in id_val.indices])
+        
+        t = set([i[0] for i in test.input_trial_array] + [i[1] for i in test.input_trial_array])
+        t1 = set([test.dataset._input_array[ix] for ix in test.indices])
+        
+        self.assertEqual(v, v1)
+        self.assertEqual(i, i1)
+        self.assertEqual(t, t1)
+
+        print("Number of files in val {}".format(len(v)))
+        print("Number of files in id_val {}".format(len(i)))
+        print("Number of files in test {}".format(len(t)))
+
+
 
         train_speakers = set(train.y_array)
         val_speakers = set(val.y_array)
@@ -33,7 +52,21 @@ class MLSRDatasetTest(unittest.TestCase):
             for j, split_j in enumerate([train_speakers, val_speakers, id_val_speakers, test_speakers]):
                 if i != j:
                     self.assertEqual(len(split_i & split_j), 0)
-        
+
+        # crush test
+        for subset in [id_val, test, val]:
+            y_true = subset.trial_y_array
+            metadata = subset.trial_metadata_array
+            y_pred = torch.rand(size=y_true.shape)
+
+            _,s1, _, s2 = subset.eval(
+                y_pred, 
+                y_true, 
+                metadata
+            )
+            print(s1)
+            print(s2)
+            
 class MetricTest(unittest.TestCase):
     def test_eer(self):
         metric = EqualErrorRate()
