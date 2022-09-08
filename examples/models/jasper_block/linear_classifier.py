@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from sr.utils.weight_init import init_weights
+
+from  examples.models.jasper_block.utils import init_weights
 
 class SpeakerClassifier(nn.Module):
 

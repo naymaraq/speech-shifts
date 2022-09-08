@@ -3,7 +3,7 @@ from torch import nn as nn
 from torch.nn import functional as F
 from numpy import inf
 
-from examples.models.titanet.utils import get_same_padding, lens_to_mask, get_statistics_with_mask
+from examples.models.jasper_block.utils import get_same_padding, lens_to_mask, get_statistics_with_mask
 
 class StatsPoolLayer(nn.Module):
     """

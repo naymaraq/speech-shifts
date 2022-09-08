@@ -4,9 +4,9 @@ import torch
 from torch import Tensor
 from torch import nn
 
-from examples.models.titanet.jasper.masked_conv import MaskedConv1d, GroupShuffle
-from examples.models.titanet.jasper.se_layer import SqueezeExcite
-from examples.models.titanet.quarznet_utils import *
+from examples.models.jasper_block.jasper.masked_conv import MaskedConv1d, GroupShuffle
+from examples.models.jasper_block.jasper.se_layer import SqueezeExcite
+from examples.models.jasper_block.quarznet_utils import *
 
 
 

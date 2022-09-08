@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 from torch.nn.init import _calculate_correct_fan
-from examples.models.titanet.jasper.masked_conv import MaskedConv1d
+from examples.models.jasper_block.jasper.masked_conv import MaskedConv1d
 
 def get_activation(activation):
     activations = {

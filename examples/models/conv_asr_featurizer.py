@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-from examples.models.titanet.utils import init_weights, get_activation
-from examples.models.titanet.jasper.jasper import JasperBlock
-from examples.models.titanet.pooling_layers import StatsPoolLayer, AttentivePoolLayer
+from examples.models.jasper_block.utils import init_weights, get_activation
+from examples.models.jasper_block.jasper.jasper import JasperBlock
+from examples.models.jasper_block.pooling_layers import StatsPoolLayer, AttentivePoolLayer
 from examples.models.base_featurizer import BaseFeaturizer
 
 
@@ -171,12 +171,3 @@ class SpeakerDecoder(nn.Module):
         pool = pool.squeeze(-1)
         emb = emb.squeeze(-1)
         return pool, emb
-
-# if __name__ == "__main__":
-#     import yaml
-#     cfg_path = "models/titanet/config/titanet_medium.yaml"
-#     with open(cfg_path) as f:
-#         cfg = yaml.load(f, Loader=yaml.FullLoader)
-    
-#     titanet_featurizer = ConvASREncoder(**cfg["featurizer"])
-#     print(titanet_featurizer)

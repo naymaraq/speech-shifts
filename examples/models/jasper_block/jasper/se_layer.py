@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from examples.models.titanet.se_utils import _se_pool_step_script_train, _se_pool_step_script_infer
+from examples.models.jasper_block.se_utils import _se_pool_step_script_train, _se_pool_step_script_infer
 
 
 class SqueezeExcite(nn.Module):

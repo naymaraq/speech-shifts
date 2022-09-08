@@ -1,0 +1,71 @@
+repeat: &rep 2
+dropout: &drop 0.5
+separable: &separable True
+n_filters: &n_filters 512
+
+featurizer:
+  feat_in: 64
+  activation: relu
+  conv_mask: true
+
+  jasper:
+    -   filters: *n_filters
+        repeat: 1
+        kernel: [3]
+        stride: [1]
+        dilation: [1]
+        dropout: *drop
+        residual: true
+        separable: *separable
+
+    -   filters: *n_filters
+        repeat: *rep
+        kernel: [7]
+        stride: [1]
+        dilation: [1]
+        dropout: *drop
+        residual: true
+        separable: *separable
+
+    -   filters: *n_filters
+        repeat: *rep
+        kernel: [11]
+        stride: [1]
+        dilation: [1]
+        dropout: *drop
+        residual: true
+        separable: *separable
+
+    -   filters: *n_filters
+        repeat: *rep
+        kernel: [15]
+        stride: [1]
+        dilation: [1]
+        dropout: *drop
+        residual: true
+        separable: *separable
+
+    -   filters: &enc_feat_out 1500
+        repeat: 1
+        kernel: [1]
+        stride: [1]
+        dilation: [1]
+        dropout: 0.0
+        residual: false
+        separable: *separable
+
+  decoder:
+    feat_in: *enc_feat_out
+    pool_mode: 'xvector'
+    emb_sizes: [512,512]
+
+classifier:
+  feat_in: 512
+  num_classes: 24543
+  angular: True
+
+
+
+
+
+
