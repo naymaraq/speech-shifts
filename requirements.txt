@@ -1,4 +1,6 @@
 torch
+torchaudio
+torch_stft
 pandas
 librosa
 pydub
