@@ -10,7 +10,7 @@ available_formats = sf.available_formats()
 sf_supported_formats = ["." + i.lower() for i in available_formats.keys()]
 
 
-class AudioSegment(object):
+class AudioSegment:
     """Monaural audio segment abstraction.
     :param samples: Audio samples [num_samples x num_channels].
     :type samples: ndarray.float32

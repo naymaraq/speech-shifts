@@ -9,7 +9,8 @@ from speech_shifts.datasets.speech_shifts_dataset import (SpeechShiftsDataset,
                                                           SpeechShiftsSubset)
 
 from speech_shifts.common.grouper import CombinatorialGrouper
-from speech_shifts.common.waveform_featurizer import WaveformFeaturizer
+from speech_shifts.common.audio.waveform_featurizer import WaveformFeaturizer
+from speech_shifts.common.audio.audio_augmentor import AudioAugmentor
 from speech_shifts.common.metrics.sv_metrics import EqualErrorRate, DCF
 EPSILION = 1e-15
 
@@ -156,8 +157,11 @@ class MLSRDataset(SpeechShiftsDataset):
         super().__init__(root_dir)
     
         
-    def set_waveform_featurizer(self, featurizer):
-        self._featurizer = featurizer
+    def set_augmentor(self, augmentor):
+        if isinstance(augmentor, AudioAugmentor):
+            self._featurizer.augmentor = augmentor
+        else:
+            raise "augmentor type is not AudioAugmentor"
 
     def get_input(self, idx, norm_energy=True, norm_value=0.061):
         audio_filepath = self._input_array[idx]

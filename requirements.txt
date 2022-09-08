@@ -2,3 +2,4 @@ torch
 pandas
 librosa
 pydub
+soxr

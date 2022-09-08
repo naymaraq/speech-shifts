@@ -1,12 +1,16 @@
 import torch
-from speech_shifts.common.segments import AudioSegment
+from speech_shifts.common.audio.segments import AudioSegment
 
 class WaveformFeaturizer:
     def __init__(self, sample_rate=16000, int_values=False, augmentor=None):
-        self.augmentor = augmentor
+        self._augmentor = augmentor
         self.sample_rate = sample_rate
         self.int_values = int_values
 
+    @property
+    def augmentor(self):
+        return self._augmentor
+    
     def process(self, file_path, offset=0, duration=0, trim=False, orig_sr=None):
         audio = AudioSegment.from_file(
             file_path,
