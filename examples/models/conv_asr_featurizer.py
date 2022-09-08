@@ -104,10 +104,6 @@ class ConvASREncoder(BaseFeaturizer):
         pool, emb = self.decoder(encoder_output, length)
         return pool, emb
 
-    def forward(self, audio_signal, length):
-        pool, emb = self.features(audio_signal, length)
-        return pool, emb
-
 
 class SpeakerDecoder(nn.Module):
     def __init__(
