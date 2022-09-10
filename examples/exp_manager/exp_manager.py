@@ -20,7 +20,7 @@ def exp_manager(config_path):
     else:
         version_folder = get_version_folder(save_dir, new=False)
 
-    logger_path = os.path.join(version_folder, 'tb_logs')
+    logger_path = os.path.join(version_folder, 'logs')
     checkpoints_path = os.path.join(version_folder, 'checkpoints')
     configs_versioning_path = os.path.join(version_folder, 'configs')
 

@@ -4,6 +4,7 @@ experiment: &experiment "./classification-log"
 audio_augmentations: "configs/augment.yaml"
 spec_augmentations: "configs/spec_augment.yaml"
 callbacks: "configs/callbacks.yaml"
+explicit_checkpoint_path: null
 
 loss:
   type: "aam"
@@ -46,4 +47,13 @@ preprocessor:
     pad_to: 16
     pad_value: 0.0
 
+trainer:
+    devices: [0]
+    max_epochs: 250
+    strategy: 'ddp'
+    accelerator: 'gpu'
+    num_nodes: 1
+    sync_batchnorm: True
+    precision: 32
+    val_check_interval: 0.5
 

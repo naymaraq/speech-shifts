@@ -6,3 +6,4 @@ librosa
 pydub
 soxr
 pytorch_lightning
+wandb
