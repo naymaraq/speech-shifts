@@ -3,8 +3,6 @@ import torch.nn as nn
 import numpy
 
 class ProtoLoss(nn.Module):
-    __loss_name__ = "ProtoLoss"
-
     def __init__(self, **kwargs):
         super(ProtoLoss, self).__init__()
         self.criterion  = torch.nn.CrossEntropyLoss()

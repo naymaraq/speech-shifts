@@ -4,6 +4,12 @@ experiment: &experiment "./classification-log"
 audio_augmentations: "configs/augment.yaml"
 spec_augmentations: "configs/spec_augment.yaml"
 
+loss:
+  type: "aam"
+  params:
+    scale: 30
+    margin: 0.2
+
 preprocessor:
   type: "mel"
   params:

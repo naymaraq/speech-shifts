@@ -4,7 +4,6 @@ import torch.nn.functional as F
 import numpy
 
 class GE2E(nn.Module):
-    __loss_name__ = "GE2E"
     
     def __init__(self, init_w=10.0, init_b=-5.0, **kwargs):
         super(GE2E, self).__init__()

@@ -2,7 +2,6 @@ import torch
 from torch.nn.modules.loss import _Loss
 
 class AngularSoftmaxLoss(_Loss):
-    __loss_name__ = "AngularSoftmaxLoss"
     def __init__(self, scale=20.0, margin=1.35):
         super().__init__()
 
