@@ -11,6 +11,7 @@ class SpeakerClassifier(nn.Module):
         num_classes: int,
         angular: bool = False,
         init_mode: str = "xavier_uniform",
+        **kwargs
     ):
         super().__init__()
         self.angular = angular

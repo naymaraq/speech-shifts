@@ -1,4 +1,4 @@
-filters: &filters 512
+filters: &filters 1024
 repeat: &repeat 3
 dropout: &dropout 0.1
 separable: &separable true
@@ -70,9 +70,6 @@ featurizer:
         feat_in: *enc_feat_out
         pool_mode: 'attention'
         emb_sizes: 192
-    
 
 classifier:
   feat_in: 192
-  num_classes: 24460
-  angular: True

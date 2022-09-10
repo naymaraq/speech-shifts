@@ -12,8 +12,6 @@ featurizer:
 
 classifier:
   feat_in: 192
-  num_classes: 24543
-  angular: True
 
 
 

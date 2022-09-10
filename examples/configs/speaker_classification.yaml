@@ -10,6 +10,14 @@ loss:
     scale: 30
     margin: 0.2
 
+model:
+  featurizer_type: "titanet_medium"
+  classifier_type: "linear"
+  params:
+    cfg_path: "configs/model_configs/titanet_medium.yaml"
+    num_classes: 20000
+    angular: True
+
 preprocessor:
   type: "mel"
   params:

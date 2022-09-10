@@ -5,6 +5,7 @@ from examples.augmentations.supported import supported as supported_perturbation
 from examples.audio_processing.spec_augment.supported import supported as supported_spec_perturbations
 from examples.audio_processing.supported import supported as supported_preprocessors
 from examples.losses.supported import supported as supported_losses
+from examples.models.supported import supported_featurizers, supported_classifiers
 
 from examples.audio_processing.spec_augment.compose import Compose
 from speech_shifts.common.audio.audio_augmentor import AudioAugmentor
@@ -74,6 +75,26 @@ def build_loss(loss_config):
         print("\N{heavy check mark} Loss function of type {} is CREATED.".format(type(loss).__name__))
         return loss
 
+def build_model(model_config):
+    if model_config is None:
+        raise ValueError("Model is missing")
+    else:
+        f_type = model_config["featurizer_type"]
+        c_type = model_config.get("classifier_type", None)
+        params = model_config["params"]
+        cfg = read_yaml(params["cfg_path"])
+        featurizer = supported_featurizers[f_type](**cfg["featurizer"])
+        print("\N{heavy check mark} Featurizer of type {} is CREATED.".format(type(featurizer).__name__))
+
+        classifier = None
+        if c_type is not None:
+            classifier_params = cfg["classifier"]
+            classifier_params.update(params)
+            classifier = supported_classifiers[c_type](**classifier_params)
+            print("\N{heavy check mark} Classifier of type {} is CREATED.".format(type(classifier).__name__))
+        return featurizer, classifier
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training speech_shifts models')
     parser.add_argument('--cfg', type=str, help='Config Path', required=False)
@@ -84,4 +105,6 @@ if __name__ == "__main__":
     spec_augmentor = build_spec_augmentor(read_yaml(cfg.get("spec_augmentations", None)))
     preprocessor = build_preprocessor(cfg.get("preprocessor", None))
     loss = build_loss(cfg.get("loss", None))
+    featurizer, classifier = build_model(cfg.get("model", None))
+
 
