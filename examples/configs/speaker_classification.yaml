@@ -1,0 +1,22 @@
+sample_rate: &sample_rate 16000
+experiment: &experiment "./classification-log" 
+
+audio_augmentations: "configs/augment.yaml"
+spec_augmentations: "configs/spec_augment.yaml"
+
+preprocessor:
+  type: "mel"
+  params:
+    sample_rate: *sample_rate
+    normalize: "per_feature"
+    window_size: 0.025
+    window_stride: 0.01
+    window: "hann"
+    features: 80
+    n_fft: 512
+    frame_splicing: 1
+    dither: 0.00001
+    pad_to: 16
+    pad_value: 0.0
+
+

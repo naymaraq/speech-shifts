@@ -4,7 +4,7 @@ import torchaudio
 from examples.audio_processing.base import AudioPreprocessor
 
 
-class AudioToMelSpectrogramPreprocessor(AudioPreprocessor):
+class TorchAudioMelSpectrogramPreprocessor(AudioPreprocessor):
 
     def __init__(
             self,
@@ -53,7 +53,6 @@ class AudioToMelSpectrogramPreprocessor(AudioPreprocessor):
         self.featurizer = torchaudio.transforms.MelSpectrogram(**mel_kwargs)
 
     def get_features(self, input_signal, length):
-
         features = self.featurizer(input_signal)
         seq_len = torch.ceil(length.to(torch.float32) / self.hop_length).to(dtype=torch.long)
         return features, seq_len
