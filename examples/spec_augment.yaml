@@ -1,0 +1,25 @@
+spec_augment:
+  do_augment: True
+  p: 0.5
+  params:
+      freq_masks: 2
+      time_masks: 2
+      freq_width: 20
+      time_width: 0.05
+
+spec_cutout:
+  do_augment: True
+  p: 0.5
+  params:
+      rect_masks: 2
+      rect_time: 5
+      rect_freq: 10
+
+masked_patch:
+  do_augment: False
+  p: 0.5
+  params:
+    patch_size: 48
+    mask_patches: 10
+    freq_masks: 0
+    freq_width: 0

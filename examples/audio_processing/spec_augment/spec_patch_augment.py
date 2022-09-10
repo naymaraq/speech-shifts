@@ -5,7 +5,7 @@ import torch.nn as nn
 
 from examples.audio_processing.spec_augment.spec_augment import SpecAugment
 
-class MaskedPatchAugmentation(nn.Module):
+class SpecMaskedPatchAugmentation(nn.Module):
     """
         Zeroes out fixed size time patches of the spectrogram.
         All samples in batch are guaranteed to have the same amount of masked time steps.

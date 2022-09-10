@@ -1,0 +1,32 @@
+crop:
+  # Mandatory for speaker recognition task
+  do_augment: True
+  p: 1.0
+  params:
+    min_dur: 0.75
+    max_dur: 6
+
+speed:
+  do_augment: False
+  p: 0.2
+  params:
+    sr: 16000
+    resample_type: 'soxr_hq'
+    min_speed_rate: 0.9
+    max_speed_rate: 1.1
+    num_rates: 5
+
+codec:
+  do_augment: False
+  p: 0.001
+  params: {}
+
+noise:
+  do_augment: False
+  p: 0.15
+  params:
+      manifest_path: []
+      min_snr_db: -8
+      max_snr_db: 20
+      max_gain_db: 300
+      orig_sr: 16000
