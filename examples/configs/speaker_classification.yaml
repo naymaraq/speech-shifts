@@ -3,6 +3,7 @@ experiment: &experiment "./classification-log"
 
 audio_augmentations: "configs/augment.yaml"
 spec_augmentations: "configs/spec_augment.yaml"
+callbacks: "configs/callbacks.yaml"
 
 loss:
   type: "aam"

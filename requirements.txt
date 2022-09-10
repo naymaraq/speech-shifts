@@ -5,3 +5,4 @@ pandas
 librosa
 pydub
 soxr
+pytorch_lightning
