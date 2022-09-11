@@ -20,13 +20,30 @@ class MLSRDatasetTest(unittest.TestCase):
     
     def test_dataloader(self):
         d = MLSRDataset(self.root_dir)
-        val = d.get_subset("val")
+        val = d.get_subset("val", loader_kwargs={"type": "single_view"})
         val_loader  = get_eval_loader("standard",
-                                         val,
-                                         batch_size=20)
+                                      val,
+                                      batch_size=20)
         batch = next(iter(val_loader))
         audio_signal, audio_lengths, labels, metadata, indices = batch
-        
+        self.assertEqual(audio_signal.shape[0], 20)
+        self.assertEqual(audio_lengths.shape[0], 20)
+        self.assertEqual(labels.shape[0], 20)
+        self.assertEqual(metadata.shape[0], 20)
+        self.assertEqual(indices.shape[0], 20)
+
+        train = d.get_subset("train", loader_kwargs={"type": "multi_view", "n_views": 3})
+        train_loader  = get_train_loader("standard",
+                                         train,
+                                         batch_size=64)
+        batch = next(iter(train_loader))
+        audio_signal, audio_lengths, labels, metadata, indices = batch
+        self.assertEqual(audio_signal.shape[0], 3*64)
+        self.assertEqual(audio_lengths.shape[0], 3*64)
+        self.assertEqual(labels.shape[0], 3*64)
+        self.assertEqual(metadata.shape[0], 3*64)
+        self.assertEqual(indices.shape[0], 3*64)
+
 
     def test_mlsr(self):
         d = MLSRDataset(self.root_dir)
@@ -35,13 +52,13 @@ class MLSRDatasetTest(unittest.TestCase):
         test = d.get_subset("test")
         train = d.get_subset("train")
 
-        v = set([i[0] for i in val.input_trial_array] + [i[1] for i in val.input_trial_array])
+        v = set([i[2] for i in val.input_trial_array] + [i[1] for i in val.input_trial_array])
         v1 = set([val.dataset._input_array[ix] for ix in val.indices])
 
-        i = set([i[0] for i in id_val.input_trial_array] + [i[1] for i in id_val.input_trial_array])
+        i = set([i[2] for i in id_val.input_trial_array] + [i[1] for i in id_val.input_trial_array])
         i1 = set([id_val.dataset._input_array[ix] for ix in id_val.indices])
         
-        t = set([i[0] for i in test.input_trial_array] + [i[1] for i in test.input_trial_array])
+        t = set([i[2] for i in test.input_trial_array] + [i[1] for i in test.input_trial_array])
         t1 = set([test.dataset._input_array[ix] for ix in test.indices])
         
         self.assertEqual(v, v1)
@@ -73,8 +90,6 @@ class MLSRDatasetTest(unittest.TestCase):
                 y_true, 
                 metadata
             )
-            print(s1)
-            print(s2)
             
 class MetricTest(unittest.TestCase):
     def test_eer(self):

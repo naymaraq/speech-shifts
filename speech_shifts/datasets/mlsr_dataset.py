@@ -6,7 +6,8 @@ import warnings
 
 from speech_shifts.datasets.speech_shifts_dataset import (SpeechShiftsDataset, 
                                                           SpeechShiftsSubsetWithTrials,
-                                                          SpeechShiftsSubset)
+                                                          SpeechShiftsSubset,
+                                                          _fixed_seq_collate_fn)
 
 from speech_shifts.common.grouper import CombinatorialGrouper
 from speech_shifts.common.audio.waveform_featurizer import WaveformFeaturizer
@@ -37,7 +38,14 @@ class MLSRDataset(SpeechShiftsDataset):
         trial_df["file2"] = trial_df["file2"].apply(lambda p: os.path.join(root_dir, p))
         return trial_df
     
-    def get_subset(self, split, frac=1.0, min_dur=None, max_dur=None, transform=None):
+    def get_subset(self, 
+                   split, 
+                   loader_kwargs={"type": "single_view"}, 
+                   frac=1.0, 
+                   min_dur=None, 
+                   max_dur=None,
+                   augmentor=None):
+        
         if split not in self.split_dict:
             raise ValueError(f"Split {split} not found in dataset's split_dict.")
         
@@ -49,7 +57,7 @@ class MLSRDataset(SpeechShiftsDataset):
                 warnings.warn("Only for train split frac can be lower than 1.0")
             trial_split_mask = self._trial_split_array == self.split_dict[split]
             trial_split_idx = np.where(trial_split_mask)[0]
-            subset_dataset = SpeechShiftsSubsetWithTrials(self, split_idx, trial_split_idx, transform)
+            subset_dataset = SpeechShiftsSubsetWithTrials(self, split_idx, trial_split_idx, loader_kwargs, augmentor)
         else:
             if frac < 1.0:
                 # Randomly sample a fraction of the split
@@ -66,13 +74,9 @@ class MLSRDataset(SpeechShiftsDataset):
                 max_dur_idx = np.where(max_duration_mask)[0]
                 split_idx = np.intersect1d(split_idx, max_dur_idx)
             
-            subset_dataset = SpeechShiftsSubset(self, split_idx, transform)
+            subset_dataset = SpeechShiftsSubset(self, split_idx, loader_kwargs, augmentor)
 
         return subset_dataset
-
-    @property
-    def index2path(self):
-        return self._index2path
     
     def __init__(self, root_dir):
         
@@ -83,7 +87,7 @@ class MLSRDataset(SpeechShiftsDataset):
         self._input_array = [os.path.join(root_dir, p) for p in metadata["audio_filepath"].tolist()]
         self._index2path = dict(enumerate(self._input_array))
 
-        self._input_trial_array = list(zip(trial_df["file1"].tolist(), trial_df["file2"].tolist()))
+        self._input_trial_array = list(zip(trial_df["y"].tolist(), trial_df["file1"].tolist(), trial_df["file2"].tolist()))
         self._duration_array = metadata["duration"].values
 
         # init _split_dict, _split_names, _split_array
@@ -131,8 +135,7 @@ class MLSRDataset(SpeechShiftsDataset):
         # init _featurizer
         # defualt _featurizer without augmentor
         self._featurizer = WaveformFeaturizer(sample_rate=16000,
-                                              int_values=False,
-                                              augmentor=None)
+                                              int_values=False)
         
         self._collate = _fixed_seq_collate_fn
             
@@ -156,18 +159,17 @@ class MLSRDataset(SpeechShiftsDataset):
         )
         super().__init__(root_dir)
     
-        
-    def set_augmentor(self, augmentor):
-        if isinstance(augmentor, AudioAugmentor):
-            self._featurizer.augmentor = augmentor
-        else:
-            raise "augmentor type is not AudioAugmentor"
-
-    def get_input(self, idx, norm_energy=True, norm_value=0.061):
+    
+    def get_input(self, idx, norm_energy=True, norm_value=0.061, augmentor=None):
         audio_filepath = self._input_array[idx]
         duration = self._duration_array[idx]
 
-        features = self._featurizer.process(audio_filepath, offset=0, duration=duration, trim=False)
+        features = self._featurizer.process(audio_filepath, 
+                        offset=0, 
+                        duration=duration, 
+                        trim=False,
+                        augmentor=augmentor
+        )
         if not isinstance(features, torch.Tensor):
             features = torch.tensor(features, dtype=torch.float)
         
@@ -204,35 +206,5 @@ class MLSRDataset(SpeechShiftsDataset):
             y_pred, y_true, metadata
         )
         return eer_results, eer_results_str, dcf_results, dcf_results_str
-            
 
-def _fixed_seq_collate_fn(batch):
-    """collate batch of audio sig, audio len, label, metadata"""
-    sig_and_length, _, _ = zip(*batch)
-    audio_lengths = [length for _, length, _ in sig_and_length]
-    fixed_length = int(max(audio_lengths))
-
-    indices = []
-    audio_signal, labels, new_audio_lengths, metadata = [], [], [], []
-    for (sig, sig_len, idx), labels_i, meta in batch:
-        sig_len = sig_len.item()
-        if sig_len < fixed_length:
-            repeat = fixed_length // sig_len
-            rem = fixed_length % sig_len
-            sub = sig[-rem:] if rem > 0 else torch.tensor([])
-            rep_sig = torch.cat(repeat * [sig])
-            sig = torch.cat((rep_sig, sub))
-        
-        new_audio_lengths.append(torch.tensor(fixed_length))    
-        audio_signal.append(sig)
-        labels.append(labels_i)
-        metadata.append(meta)
-        indices.append(torch.tensor(idx).long())
-
-    audio_signal = torch.stack(audio_signal)
-    audio_lengths = torch.stack(new_audio_lengths)
-    labels = torch.stack(labels)
-    metadata = torch.stack(metadata)
-    indices = torch.stack(indices)
-    return audio_signal, audio_lengths, labels, metadata, indices
 

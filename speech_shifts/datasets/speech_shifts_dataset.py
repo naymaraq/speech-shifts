@@ -117,7 +117,7 @@ class SpeechShiftsDataset:
         """
         raise NotImplementedError
     
-    def get_subset(self, split, frac=1.0, min_dur=None, max_dur=None, transform=None):
+    def get_subset(self, split, loader_kwargs={"type": "single_view"}, frac=1.0, min_dur=None, max_dur=None):
         """
         Args:
             - split (str): Split identifier, e.g., 'train', 'val', 'test'.
@@ -149,7 +149,13 @@ class SpeechShiftsDataset:
             max_dur_idx = np.where(max_duration_mask)[0]
             split_idx = np.intersect1d(split_idx, max_dur_idx)
 
-        return SpeechShiftsSubset(self, split_idx, transform)
+        return SpeechShiftsSubset(self, split_idx, loader_kwargs)
+
+    def get_augmented_item(self, idx, augmentor):
+        x = self.get_input(idx, augmentor=augmentor)
+        y = self.y_array[idx]
+        metadata = self.metadata_array[idx]
+        return x, y, metadata
 
     def __getitem__(self, idx):
         x = self.get_input(idx)
@@ -251,30 +257,57 @@ class SpeechShiftsDataset:
 
 class SpeechShiftsSubset(SpeechShiftsDataset):
 
-    def __init__(self, dataset, indices, transform, do_transform_y=False):
+    def __init__(self, dataset, indices, loader_kwargs, augmentor=None):
 
         self.dataset = dataset
+        self.augmentor = augmentor
         self.indices = indices
-        inherited_attrs = ['_dataset_name', '_collate',
+        inherited_attrs = ['_dataset_name',
                            '_split_dict', '_split_names',
                            '_y_size', '_n_classes',
-                           '_metadata_fields', '_metadata_map']
+                           '_metadata_fields', 
+                           '_metadata_map', '_index2path']
         
         for attr_name in inherited_attrs:
             if hasattr(dataset, attr_name):
                 setattr(self, attr_name, getattr(dataset, attr_name))
         
-        self.transform = transform
-        self.do_transform_y = do_transform_y
+        self.loader_kwargs = loader_kwargs
+        self.loader_type = loader_kwargs["type"]
+        if self.loader_type == "single_view":
+            self._collate = self.dataset._collate
+        elif self.loader_type == "multi_view":
+            self.n_views = loader_kwargs["n_views"]
+            self.label2samples = {}
+            for idx in range(len(self.indices)):
+                y = self.dataset.y_array[self.indices[idx]].item()
+                if y not in self.label2samples:
+                    self.label2samples[y] = []
+                self.label2samples[y].append(idx)
+            self._collate = _multivew_collate_fn
+    
+    def standard_getitem(self, idx):
+        x, y, metadata = self.dataset.get_augmented_item(self.indices[idx], self.augmentor)
+        return x, y, metadata
+
+    def get_sample(self, idx):
+        y = self.dataset.y_array[self.indices[idx]]
+        anchor_id = np.random.choice(self.label2samples[y.item()])
+        x, y, metadata = self.standard_getitem(anchor_id)
+        return x, y, metadata
+
+    def multiview_getitem(self, idx):
+        views = []
+        for _ in range(self.n_views):
+            view = self.get_sample(idx)
+            views.append(view)
+        return views
 
     def __getitem__(self, idx):
-        x, y, metadata = self.dataset[self.indices[idx]]
-        if self.transform is not None:
-            if self.do_transform_y:
-                x, y = self.transform(x, y)
-            else:
-                x = self.transform(x)
-        return x, y, metadata
+        if self.loader_type == "single_view":
+            return self.standard_getitem(idx)
+        if self.loader_type == "multi_view":
+            return self.multiview_getitem(idx)
 
     def __len__(self):
         return len(self.indices)
@@ -301,7 +334,7 @@ class SpeechShiftsSubset(SpeechShiftsDataset):
 
 class SpeechShiftsSubsetWithTrials(SpeechShiftsSubset):
 
-    def __init__(self, dataset, indices, trial_indices, transform, do_transform_y=False):
+    def __init__(self, dataset, indices, trial_indices, loader_kwargs, augmentor=None):
 
         self.trial_indices = trial_indices
         inherited_trial_attrs = ['_trial_y_size', 
@@ -313,7 +346,7 @@ class SpeechShiftsSubsetWithTrials(SpeechShiftsSubset):
             if hasattr(dataset, attr_name):
                 setattr(self, attr_name, getattr(dataset, attr_name))
         
-        super().__init__(dataset, indices, transform, do_transform_y)
+        super().__init__(dataset, indices, loader_kwargs, augmentor)
     
     @property
     def trial_split_array(self):
@@ -330,3 +363,43 @@ class SpeechShiftsSubsetWithTrials(SpeechShiftsSubset):
     @property
     def input_trial_array(self):
         return [self.dataset._input_trial_array[ix] for ix in self.trial_indices]
+
+def _multivew_collate_fn(batch):
+    views = []
+    for i in range(len(batch)):
+        views.extend(batch[i])
+
+    return _fixed_seq_collate_fn(views)
+
+def _fixed_seq_collate_fn(batch):
+    """collate batch of audio sig, audio len, label, metadata"""
+    sig_and_length, _, _ = zip(*batch)
+    audio_lengths = [length for _, length, _ in sig_and_length]
+    fixed_length = int(max(audio_lengths))
+
+    indices = []
+    audio_signal, labels, new_audio_lengths, metadata = [], [], [], []
+    for (sig, sig_len, idx), labels_i, meta in batch:
+        sig_len = sig_len.item()
+        if sig_len < fixed_length:
+            repeat = fixed_length // sig_len
+            rem = fixed_length % sig_len
+            sub = sig[-rem:] if rem > 0 else torch.tensor([])
+            rep_sig = torch.cat(repeat * [sig])
+            sig = torch.cat((rep_sig, sub))
+        
+        new_audio_lengths.append(torch.tensor(fixed_length))    
+        audio_signal.append(sig)
+        labels.append(labels_i)
+        metadata.append(meta)
+        indices.append(torch.tensor(idx).long())
+
+    audio_signal = torch.stack(audio_signal)
+    audio_lengths = torch.stack(new_audio_lengths)
+    labels = torch.stack(labels)
+    metadata = torch.stack(metadata)
+    indices = torch.stack(indices)
+    return audio_signal, audio_lengths, labels, metadata, indices
+    
+    
+
