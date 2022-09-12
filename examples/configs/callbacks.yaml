@@ -1,8 +1,8 @@
 ModelCheckpoint:
   do_callback: True
   params:
-      monitor: "eer"
-      filename: "{epoch:002d}-{eer:.4f}"
+      monitor: "val_eer"
+      filename: "{epoch:002d}-{val_eer:.4f}"
       save_top_k: 4
       verbose: True
       save_last: True

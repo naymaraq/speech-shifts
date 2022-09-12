@@ -4,7 +4,7 @@ crop:
   p: 1.0
   params:
     min_dur: 0.75
-    max_dur: 6
+    max_dur: 2
 
 speed:
   do_augment: False
@@ -20,6 +20,7 @@ codec:
   do_augment: False
   p: 0.001
   params: {}
+
 
 noise:
   do_augment: False

@@ -6,6 +6,14 @@ spec_augmentations: "configs/spec_augment.yaml"
 callbacks: "configs/callbacks.yaml"
 explicit_checkpoint_path: null
 
+data:
+  root_dir: '/home/tsargsyan/davit/voxsrc22/dg-sr/cv-corpus-wav'
+  params:
+    n_views: 1
+    train_bs: 8
+    eval_bs: 8
+    type: "standard"
+
 loss:
   type: "aam"
   params:
@@ -29,7 +37,6 @@ model:
   classifier_type: "linear"
   params:
     cfg_path: "configs/model_configs/titanet_medium.yaml"
-    num_classes: 20000
     angular: True
 
 preprocessor:
@@ -55,5 +62,5 @@ trainer:
     num_nodes: 1
     sync_batchnorm: True
     precision: 32
-    val_check_interval: 0.5
+    val_check_interval: 0.001
 

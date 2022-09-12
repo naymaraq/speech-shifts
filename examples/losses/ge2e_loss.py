@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy
 
-class GE2E(nn.Module):
+class GE2ELoss(nn.Module):
     
     def __init__(self, init_w=10.0, init_b=-5.0, **kwargs):
-        super(GE2E, self).__init__()
+        super(GE2ELoss, self).__init__()
 
         self.test_normalize = True
         
