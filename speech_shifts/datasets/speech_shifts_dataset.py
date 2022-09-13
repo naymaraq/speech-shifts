@@ -273,11 +273,10 @@ class SpeechShiftsSubset(SpeechShiftsDataset):
                 setattr(self, attr_name, getattr(dataset, attr_name))
         
         self.loader_kwargs = loader_kwargs
-        self.loader_type = loader_kwargs["type"]
-        if self.loader_type == "single_view":
+        self.n_views = loader_kwargs["n_views"]
+        if self.n_views == 1:
             self._collate = self.dataset._collate
-        elif self.loader_type == "multi_view":
-            self.n_views = loader_kwargs["n_views"]
+        elif self.n_views > 1:
             self.label2samples = {}
             for idx in range(len(self.indices)):
                 y = self.dataset.y_array[self.indices[idx]].item()
@@ -285,6 +284,8 @@ class SpeechShiftsSubset(SpeechShiftsDataset):
                     self.label2samples[y] = []
                 self.label2samples[y].append(idx)
             self._collate = _multivew_collate_fn
+        else:
+            raise ValueError("n_views need to be greater than 1")
     
     def standard_getitem(self, idx):
         x, y, metadata = self.dataset.get_augmented_item(self.indices[idx], self.augmentor)
@@ -304,9 +305,9 @@ class SpeechShiftsSubset(SpeechShiftsDataset):
         return views
 
     def __getitem__(self, idx):
-        if self.loader_type == "single_view":
+        if self.n_views == 1:
             return self.standard_getitem(idx)
-        if self.loader_type == "multi_view":
+        else:
             return self.multiview_getitem(idx)
 
     def __len__(self):
