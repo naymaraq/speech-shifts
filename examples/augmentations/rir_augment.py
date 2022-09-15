@@ -1,4 +1,5 @@
 import random
+import numpy as np
 from examples.augmentations.noise_augment import NoisePerturbation
 from examples.augmentations.impulse_augment import ImpulsePerturbation
 from speech_shifts.common.audio.perturb import Perturbation
@@ -83,16 +84,17 @@ class RirAndNoisePerturbation(Perturbation):
         if prob < self._rir_prob:
             self._rir_perturber(data)
 
-        data_rms = data.rms_db
-        if self.fg_perturber:
-            noise = self.fg_perturber.get_one_noise_sample(data.sample_rate)
-            if self._apply_noise_rir:
-                self._rir_perturber(noise)
-            
-            self.fg_perturber.perturb_with_foreground_noise(
-                data, noise, data_rms=data_rms, max_noise_dur=self._max_duration, max_additions=self._max_additions
-            )
+        if data.rms != 0:
+            data_rms = data.rms_db
+            if self.fg_perturber:
+                noise = self.fg_perturber.get_one_noise_sample(data.sample_rate)
+                if self._apply_noise_rir:
+                    self._rir_perturber(noise)
+                
+                self.fg_perturber.perturb_with_foreground_noise(
+                    data, noise, data_rms=data_rms, max_noise_dur=self._max_duration, max_additions=self._max_additions
+                )
 
-        if self.bg_perturber:
-            noise = self.bg_perturber.get_one_noise_sample(data.sample_rate)
-            self.bg_perturber.perturb_with_input_noise(data, noise, data_rms=data_rms)
+            if self.bg_perturber:
+                noise = self.bg_perturber.get_one_noise_sample(data.sample_rate)
+                self.bg_perturber.perturb_with_input_noise(data, noise, data_rms=data_rms)
