@@ -1,5 +1,5 @@
 sample_rate: &sample_rate 16000
-experiment: &experiment "./classification-log" 
+experiment: &experiment "./erm-log" 
 
 audio_augmentations: "configs/augment.yaml"
 spec_augmentations: "configs/spec_augment.yaml"
@@ -9,16 +9,27 @@ explicit_checkpoint_path: null
 data:
   root_dir: '/home/tsargsyan/davit/voxsrc22/dg-sr/cv-corpus-wav'
   params:
-    n_views: 1
-    train_bs: 8
+    n_views: 5
+    train_bs: 20
     eval_bs: 8
-    type: "standard"
+
+# loss:
+#   type: "aam"
+#   params:
+#     scale: 30.0
+#     margin: 0.2
+
+# loss:
+#   type: "ge2e"
+#   params:
+#     init_w: 10.0
+#     init_b: -5.0
 
 loss:
-  type: "aam"
+  type: "angular_proto"
   params:
-    scale: 30
-    margin: 0.2
+    init_w: 10.0
+    init_b: -5.0
 
 optimizer:
     type: 'sgd'
@@ -34,10 +45,10 @@ optimizer:
 
 model:
   featurizer_type: "titanet_medium"
-  classifier_type: "linear"
+  #classifier_type: "linear"
   params:
     cfg_path: "configs/model_configs/titanet_medium.yaml"
-    angular: True
+    #angular: True
 
 preprocessor:
   type: "mel"
@@ -62,5 +73,5 @@ trainer:
     num_nodes: 1
     sync_batchnorm: True
     precision: 32
-    val_check_interval: 0.001
+    val_check_interval: 0.01
 

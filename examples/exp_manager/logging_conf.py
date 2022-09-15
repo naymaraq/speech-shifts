@@ -14,7 +14,7 @@ handlers:
     level: 'INFO'
     class: 'logging.handlers.WatchedFileHandler'
     formatter: 'brief'
-    filename: './speech_shifts.log'
+    filename: './speech-shifts.log'
     mode: 'a'
     encoding: 'utf-8'
 root:

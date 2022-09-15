@@ -4,7 +4,7 @@ crop:
   p: 1.0
   params:
     min_dur: 0.75
-    max_dur: 2
+    max_dur: 4
 
 speed:
   do_augment: False

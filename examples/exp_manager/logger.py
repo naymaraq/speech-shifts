@@ -11,4 +11,4 @@ def get_logger(logger_name):
     logger = logging.getLogger(logger_name)
     return logger
 
-sr_logger = get_logger("speaker-recognition")
+sr_logger = get_logger("speech-shifts")
