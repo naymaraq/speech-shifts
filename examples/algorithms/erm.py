@@ -87,7 +87,6 @@ class SpeakerEmbeddingModel(pl.LightningModule):
             labels = torch.stack([torch.tensor(self.train_y_map[label.item()]).long() for label in labels]).to(labels.device)
             loss = self.loss(logits=logits, labels=labels)
         else:
-            #emb = emb.reshape(self.n_views, -1, emb.size()[-1]).transpose(1, 0).squeeze(1)
             N = audio_signal.shape[0] // self.n_views
             emb = emb.view(N, self.n_views, -1)
             loss = self.loss(x=emb, labels=None)

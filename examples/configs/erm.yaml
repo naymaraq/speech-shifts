@@ -9,9 +9,10 @@ explicit_checkpoint_path: null
 data:
   root_dir: '/home/tsargsyan/davit/voxsrc22/dg-sr/cv-corpus-wav'
   params:
-    n_views: 5
-    train_bs: 20
+    n_views: 4
+    train_bs: 64
     eval_bs: 8
+    num_workers: 30
 
 # loss:
 #   type: "aam"
@@ -19,17 +20,17 @@ data:
 #     scale: 30.0
 #     margin: 0.2
 
-# loss:
-#   type: "ge2e"
-#   params:
-#     init_w: 10.0
-#     init_b: -5.0
-
 loss:
-  type: "angular_proto"
+  type: "ge2e"
   params:
     init_w: 10.0
     init_b: -5.0
+
+# loss:
+#   type: "angular_proto"
+#   params:
+#     init_w: 10.0
+#     init_b: -5.0
 
 optimizer:
     type: 'sgd'
@@ -72,6 +73,6 @@ trainer:
     accelerator: 'gpu'
     num_nodes: 1
     sync_batchnorm: True
-    precision: 32
-    val_check_interval: 0.01
+    precision: 16
+    val_check_interval: 0.33
 

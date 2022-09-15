@@ -6,17 +6,17 @@ import torch
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
 
-from examples.augmentations.supported import supported as supported_perturbations
-from examples.audio_processing.spec_augment.supported import supported as supported_spec_perturbations
-from examples.audio_processing.supported import supported as supported_preprocessors
-from examples.losses.supported import supported as supported_losses
+from examples.augmentations.supported import  supported_perturbations
+from examples.audio_processing.spec_augment.supported import supported_spec_perturbations
+from examples.audio_processing.supported import supported_preprocessors
+from examples.losses.supported import supported_losses
 from examples.models.supported import supported_featurizers, supported_classifiers
 from examples.callbacks.supported import supported_callbacks
 from examples.exp_manager.exp_manager import exp_manager
 from examples.exp_manager.logger import sr_logger
 
 from examples.audio_processing.spec_augment.compose import Compose
-from examples.algorithms.classification import SpeakerEmbeddingModel
+from examples.algorithms.erm import SpeakerEmbeddingModel
 
 from speech_shifts.datasets.mlsr_dataset import MLSRDataset
 from speech_shifts.common.get_loaders import get_train_loader, get_eval_loader
@@ -41,9 +41,9 @@ def build_spec_augmentor(spec_augmentations_config):
                     aug_obj = aug_class(**aug_config["params"])
                     p = aug_config["p"]
                     perturbations.append((p, aug_obj))
-                    sr_logger.info("\N{heavy check mark}  Spectogram augmentation of type {} is turned ON.".format(aug_type))
+                    sr_logger.info("\N{heavy check mark}  Spectogram augmentation of type {:^20} is turned ON.".format(aug_type))
                 else:
-                    sr_logger.info("\N{cross mark} Spectogram augmentation of type {} is turned OFF.".format(aug_type))
+                    sr_logger.info("\N{cross mark} Spectogram augmentation of type {:^20} is turned OFF.".format(aug_type))
     composed = Compose(perturbations)
     return composed
     
@@ -59,10 +59,12 @@ def build_augmentor(augmentations_config):
                     aug_obj = aug_class(**aug_config["params"])
                     p = aug_config["p"]
                     perturbations.append((p, aug_obj))
-                    sr_logger.info("\N{heavy check mark}  Audio augmentation of type {} is turned ON.".format(aug_type))
+                    sr_logger.info("\N{heavy check mark}  Audio augmentation of type {:^10} is turned ON with probability {}.".format(aug_type, p))
                 else:
-                    sr_logger.info("\N{cross mark} Audio augmentation type of {} is turned OFF.".format(aug_type))
-    augmentor = AudioAugmentor(perturbations=perturbations, mutex_perturbations=None)
+                    sr_logger.info("\N{cross mark} Audio augmentation type of {:^10} is turned OFF.".format(aug_type))
+    
+    mutex_perturbations = [supported_perturbations[a] for a in ["impulse", "rir", "noise"]]
+    augmentor = AudioAugmentor(perturbations=perturbations, mutex_perturbations=mutex_perturbations)
     return augmentor
 
 def build_preprocessor(preprocessor_config, eval=False):
@@ -123,9 +125,9 @@ def build_callbacks(callbacks_config, checkpoints_save_dir):
                     else:
                         call_obj = call_class(**call_config["params"])
                     callbacks.append(call_obj)
-                    sr_logger.info("\N{heavy check mark}  Callback of type {} is CREATED.".format(type(call_obj).__name__))
+                    sr_logger.info("\N{heavy check mark}  Callback of type {:^20} is CREATED.".format(type(call_obj).__name__))
                 else:
-                    sr_logger.info("\N{cross mark} Callback type of {} is turned OFF.".format(call_type))
+                    sr_logger.info("\N{cross mark} Callback type of {:^20} is turned OFF.".format(call_type))
 
     return callbacks
 
@@ -156,21 +158,22 @@ def build_dataloaders(data_config, augmentor):
         raise ValueError("Data is missing.")
     
     dataset = MLSRDataset(data_config["root_dir"])
-    loader_kwargs = {"type": "single_view"}
+    loader_kwargs = {"n_views": 1}
     val_dataset = dataset.get_subset("val", loader_kwargs=loader_kwargs, augmentor=None)
     id_val_dataset = dataset.get_subset("id_val", loader_kwargs=loader_kwargs, augmentor=None)
     test_dataset = dataset.get_subset("test", loader_kwargs=loader_kwargs, augmentor=None)
 
     params = data_config["params"]
-    n_views = params["n_views"]
-    if n_views > 1:
-        loader_kwargs = {"type": "multi_view", "n_views": n_views}
+    loader_kwargs = {"n_views": params["n_views"]}
     train_dataset = dataset.get_subset("train", loader_kwargs=loader_kwargs, augmentor=augmentor)
 
-    val_dataloader = get_eval_loader("standard", val_dataset, batch_size=params["eval_bs"], num_workers=10)
-    test_dataloader = get_eval_loader("standard", test_dataset, batch_size=params["eval_bs"])
-    id_val_dataloader = get_eval_loader("standard", id_val_dataset, batch_size=params["eval_bs"], num_workers=10)
-    train_dataloader = get_train_loader("standard", train_dataset, batch_size=params["train_bs"])
+    eval_bs = params["eval_bs"]
+    train_bs = params["train_bs"]
+    num_workers = params["num_workers"]
+    val_dataloader = get_eval_loader("standard", val_dataset, batch_size=eval_bs, num_workers=num_workers, pin_memory=True)
+    #test_dataloader = get_eval_loader("standard", test_dataset, batch_size=eval_bs, num_workers=num_workers, pin_memory=True)
+    id_val_dataloader = get_eval_loader("standard", id_val_dataset, batch_size=eval_bs, num_workers=num_workers, pin_memory=True)
+    train_dataloader = get_train_loader("standard", train_dataset, batch_size=train_bs, num_workers=num_workers, pin_memory=True)
 
     sr_logger.info("\N{heavy check mark}  Train Dataset of type {} is CREATED.".format(type(train_dataset).__name__))
     sr_logger.info("\N{heavy check mark}  Val Dataset of type {} is CREATED.".format(type(val_dataset).__name__))
@@ -198,12 +201,12 @@ if __name__ == "__main__":
      (val_dataset, val_dataloader),
      (id_val_dataset, id_val_dataloader)) = build_dataloaders(cfg.get("data", None), augmentor)
     
+    loss = build_loss(cfg.get("loss", None))
     num_classes = len(set(train_dataset.y_array.tolist()))
     featurizer, classifier = build_model(cfg.get("model", None), num_classes)
 
     spec_augmentor = build_spec_augmentor(read_yaml(cfg.get("spec_augmentations", None)))
     preprocessor = build_preprocessor(cfg.get("preprocessor", None))
-    loss = build_loss(cfg.get("loss", None))
     trainer = build_trainer(cfg, args.cfg)
 
 
@@ -211,10 +214,11 @@ if __name__ == "__main__":
         preprocessor=preprocessor,
         train_spec_augmentor=spec_augmentor,
         featurizer=featurizer,
-        classifier=classifier,
         loss=loss,
-        optim_config=cfg["optimizer"]
+        optim_config=cfg["optimizer"],
+        classifier=classifier,
     )
+    
     model.setup_dataloaders(train_dataset, 
         train_dataloader, 
         val_dataset, 
