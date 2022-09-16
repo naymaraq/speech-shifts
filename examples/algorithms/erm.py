@@ -128,12 +128,13 @@ class SpeakerEmbeddingModel(pl.LightningModule):
                 id_val_y_true, 
                 self.id_val_dataset.trial_metadata_array
             )
-
-            sr_logger.info("\nvalidation_eer (OOD)\n\n{}".format(val_eer_results_str))
-            sr_logger.info("\nvalidation_dcf (OOD)\n\n{}".format(val_dcf_results_str))
-
-            sr_logger.info("\nvalidation_eer (ID)\n\n{}".format(id_val_eer_results_str))
-            sr_logger.info("\nvalidation_dcf (ID)\n\n{}".format(id_val_dcf_results_str))
+            
+            log_text = "\n"+"-"*50
+            log_text += "\nValidation results at {} step".format(self.trainer.global_step)
+            log_text += "\nValidation EER (OOD)\n\n{}\nValidation DCF (OOD)\n\n{}".format(val_eer_results_str, val_dcf_results_str)
+            log_text += "\nValidation EER (ID) \n\n{}\nValidation DCF (ID)\n\n{}".format(id_val_eer_results_str, id_val_dcf_results_str)
+            log_text += "\n"+"-"*50
+            sr_logger.info(log_text)
 
 
             for res, name in [(val_eer_results,"EER"), (id_val_eer_results, "EER"),
