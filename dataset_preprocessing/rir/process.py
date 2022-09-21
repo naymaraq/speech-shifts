@@ -36,8 +36,8 @@ def process_dataset(root_dir, key, out_dir):
 
 if __name__ == "__main__":
 
-    root_dir = "/data1/zipped/sr_data/RIRS_NOISES/"
-    out_dir  = "./rir-proccesed"
+    root_dir = "/data/mlsr-data/RIRS_NOISES/"
+    out_dir  = "/data/mlsr-data/RIRS_NOISES/rir-proccesed"
     os.makedirs(out_dir, exist_ok=True)
 
     for key in ["pointsource_noises", "real_rirs_isotropic_noises", "simulated_rirs"]:

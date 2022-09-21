@@ -58,8 +58,8 @@ def process_dataset(root_dir, key, out_dir):
 
 if __name__ == "__main__":
 
-    root_dir = "/data1/zipped/sr_data/musan/"
-    out_dir  = "./musan-proccesed"
+    root_dir = "/data/mlsr-data/musan"
+    out_dir  = "/data/mlsr-data/musan/musan-proccesed"
     os.makedirs(out_dir, exist_ok=True)
 
     for key in ["music", "speech", "noise"]:

@@ -214,8 +214,8 @@ def write_metadata(items, path):
     
 if __name__ == "__main__":
 
-    root_dir = "../../../cv-corpus-10.0-2022-07-04"
-    out_dir = "../../../cv-corpus-wav"
+    root_dir = "/data/mlsr-data/cv-corpus-10.0-2022-07-04"
+    out_dir = "/data/mlsr-data/cv-corpus-wav"
     os.makedirs(out_dir, exist_ok=True)
     
     joined_items = []
@@ -234,8 +234,14 @@ if __name__ == "__main__":
         if split in ["test", "val"]:
             trials = get_trials(filtered_data, hard=True, n_trials=50000)
             trials = trials[:30000]
-            filtered_data = remove_unused_files(filtered_data, trials)
+            #filtered_data = remove_unused_files(filtered_data, trials)
+            filtered_data, rest = sep_train_from_id_val(filtered_data, trials)
             trial_split = split
+            for item in rest:
+                item["split"] = split
+                item["audio_filepath"] = rel_path(item["audio_filepath"])
+                joined_items.append(item)
+            split = f"{lang}-train"
         else:
             trials = get_trials(filtered_data, hard=True, n_trials=10000)
             trials = trials[:5000]
