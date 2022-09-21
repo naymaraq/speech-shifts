@@ -16,11 +16,25 @@ from speech_shifts.common.metrics.sv_metrics import EqualErrorRate, DCF
 from speech_shifts.common.get_loaders import get_train_loader, get_eval_loader
 
 class MLSRDatasetTest(unittest.TestCase):
-    root_dir = "/home/tsargsyan/davit/voxsrc22/dg-sr/cv-corpus-wav"
+    root_dir = "/data/mlsr-data/cv-corpus-wav"
     
+    def test_other(self):
+        d = MLSRDataset(self.root_dir)
+        zh_CN_train = d.get_subset("zh-CN-train", loader_kwargs={"n_views": 1})
+        test = d.get_subset("test", {"n_views": 1})
+
+        zh_CN_train_speakers = set(zh_CN_train.y_array)
+        test_speakers = set(test.y_array)
+        
+        for i, split_i in enumerate([zh_CN_train_speakers, test_speakers]):
+            for j, split_j in enumerate([zh_CN_train_speakers, test_speakers]):
+                if i != j:
+                    self.assertEqual(len(split_i & split_j), 0)
+
+
     def test_dataloader(self):
         d = MLSRDataset(self.root_dir)
-        val = d.get_subset("val", loader_kwargs={"type": "single_view"})
+        val = d.get_subset("val", loader_kwargs={"n_views": 1})
         val_loader  = get_eval_loader("standard",
                                       val,
                                       batch_size=20)
@@ -32,7 +46,7 @@ class MLSRDatasetTest(unittest.TestCase):
         self.assertEqual(metadata.shape[0], 20)
         self.assertEqual(indices.shape[0], 20)
 
-        train = d.get_subset("train", loader_kwargs={"type": "multi_view", "n_views": 3})
+        train = d.get_subset("train", loader_kwargs={"n_views": 3})
         train_loader  = get_train_loader("standard",
                                          train,
                                          batch_size=64)
@@ -47,10 +61,10 @@ class MLSRDatasetTest(unittest.TestCase):
 
     def test_mlsr(self):
         d = MLSRDataset(self.root_dir)
-        val = d.get_subset("val")
-        id_val = d.get_subset("id_val")
-        test = d.get_subset("test")
-        train = d.get_subset("train")
+        val = d.get_subset("val", {"n_views": 1})
+        id_val = d.get_subset("id_val", {"n_views": 1})
+        test = d.get_subset("test", {"n_views": 1})
+        train = d.get_subset("train", {"n_views": 1})
 
         v = set([i[2] for i in val.input_trial_array] + [i[1] for i in val.input_trial_array])
         v1 = set([val.dataset._input_array[ix] for ix in val.indices])

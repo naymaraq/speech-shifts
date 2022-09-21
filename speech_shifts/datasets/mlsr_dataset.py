@@ -51,9 +51,9 @@ class MLSRDataset(SpeechShiftsDataset):
         split_mask = self.split_array == self.split_dict[split]
         split_idx = np.where(split_mask)[0]
 
-        if split != "train":
+        if split in ["test", "val", "id_val"]:
             if frac < 1.0:
-                warnings.warn("Only for train split frac can be lower than 1.0")
+                warnings.warn("test/val/id_val splits frac can't be lower than 1.0")
             trial_split_mask = self._trial_split_array == self.split_dict[split]
             trial_split_idx = np.where(trial_split_mask)[0]
             subset_dataset = SpeechShiftsSubsetWithTrials(self, split_idx, trial_split_idx, loader_kwargs, augmentor)
@@ -94,13 +94,22 @@ class MLSRDataset(SpeechShiftsDataset):
             'train': 0,
             'id_val': 1,
             'test': 2,
-            'val': 3
+            'val': 3,
+            'zh-CN-train': 4,
+            'de-train': 5,
+            'es-train': 6,
+            'rw-train': 7
+
         }
         self._split_names = {
             'train': 'Train',
             'id_val': 'Validation (ID)',
             'test': 'Test',
             'val': 'Validation (OOD)',
+            'zh-CN-train': 'Train zh-CN',
+            'de-train': 'Train de',
+            'es-train': 'Train es',
+            'rw-train': 'Train rw'
         }
         for split in self.split_dict:
             metadata.loc[(metadata["split"] == split), "split"] = self.split_dict[split]
