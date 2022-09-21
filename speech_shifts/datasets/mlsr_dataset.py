@@ -11,7 +11,6 @@ from speech_shifts.datasets.speech_shifts_dataset import (SpeechShiftsDataset,
 
 from speech_shifts.common.grouper import CombinatorialGrouper
 from speech_shifts.common.audio.waveform_featurizer import WaveformFeaturizer
-from speech_shifts.common.audio.audio_augmentor import AudioAugmentor
 from speech_shifts.common.metrics.sv_metrics import EqualErrorRate, DCF
 EPSILION = 1e-15
 
@@ -40,7 +39,7 @@ class MLSRDataset(SpeechShiftsDataset):
     
     def get_subset(self, 
                    split, 
-                   loader_kwargs={"type": "single_view"}, 
+                   loader_kwargs, 
                    frac=1.0, 
                    min_dur=None, 
                    max_dur=None,

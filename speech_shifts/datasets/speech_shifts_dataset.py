@@ -117,7 +117,7 @@ class SpeechShiftsDataset:
         """
         raise NotImplementedError
     
-    def get_subset(self, split, loader_kwargs={"type": "single_view"}, frac=1.0, min_dur=None, max_dur=None):
+    def get_subset(self, split, loader_kwargs, frac=1.0, min_dur=None, max_dur=None):
         """
         Args:
             - split (str): Split identifier, e.g., 'train', 'val', 'test'.
