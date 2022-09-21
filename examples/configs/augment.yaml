@@ -3,15 +3,9 @@ impulse:
   p: 0.1
   params:
     manifest_path: [
-      /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-pointsource_noises-dev-nonzeros.json,
-      /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-pointsource_noises-test-nonzeros.json,
-      /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-pointsource_noises-train-nonzeros.json,
-      /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-real_rirs-dev-nonzeros.json,
-      /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-real_rirs-test-nonzeros.json,
-      /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-real_rirs-train-nonzeros.json,
-      /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-simulated_rirs-dev-nonzeros.json,
-      /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-simulated_rirs-test-nonzeros.json,
-      /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-simulated_rirs-train-nonzeros.json
+      /data/mlsr-data/RIRS_NOISES/rir-proccesed/rir-pointsource_noises.json,
+      /data/mlsr-data/RIRS_NOISES/rir-proccesed/rir-simulated_rirs.json,
+      /data/mlsr-data/RIRS_NOISES/rir-proccesed/rir-real_rirs_isotropic_noises.json
     ]
     shift_impulse: False
 
@@ -20,31 +14,17 @@ rir:
   p: 0.1
   params:
     rir_manifest_path: [
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-pointsource_noises-dev-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-pointsource_noises-test-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-pointsource_noises-train-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-real_rirs-dev-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-real_rirs-test-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-real_rirs-train-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-simulated_rirs-dev-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-simulated_rirs-test-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-rir-simulated_rirs-train-nonzeros.json
+      /data/mlsr-data/RIRS_NOISES/rir-proccesed/rir-pointsource_noises.json,
+      /data/mlsr-data/RIRS_NOISES/rir-proccesed/rir-simulated_rirs.json,
+      /data/mlsr-data/RIRS_NOISES/rir-proccesed/rir-real_rirs_isotropic_noises.json
     ]
     noise_manifest_paths: [
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-music-dev-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-music-test-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-music-train-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-noise-dev-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-noise-test-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-noise-train-nonzeros.json
+        /data/mlsr-data/musan/musan-proccesed/musan-music.json,
+        /data/mlsr-data/musan/musan-proccesed/musan-noise.json,
     ]
     bg_noise_manifest_paths: [
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-music-dev-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-music-test-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-music-train-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-noise-dev-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-noise-test-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-noise-train-nonzeros.json
+        /data/mlsr-data/musan/musan-proccesed/musan-music.json,
+        /data/mlsr-data/musan/musan-proccesed/musan-noise.json,
     ]
     rir_prob: 0.5
     min_snr_db: 5
@@ -69,14 +49,10 @@ noise:
   p: 0.1
   params:
       manifest_path: [
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-music-dev-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-music-test-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-music-train-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-noise-dev-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-noise-test-nonzeros.json,
-        /home/tsargsyan/davit/voxsrc22/voxsrc22-manifests/sr-musan-noise-train-nonzeros.json
+        /data/mlsr-data/musan/musan-proccesed/musan-music.json,
+        /data/mlsr-data/musan/musan-proccesed/musan-noise.json,
       ]
-      min_snr_db: -8
+      min_snr_db: 0
       max_snr_db: 20
       max_gain_db: 300
       orig_sr: 16000

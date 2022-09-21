@@ -1,136 +1,33 @@
 import argparse
-import yaml
 import os
 import torch
 
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger, TensorBoardLogger
 
-from examples.augmentations.supported import  supported_perturbations
-from examples.audio_processing.spec_augment.supported import supported_spec_perturbations
-from examples.audio_processing.supported import supported_preprocessors
-from examples.losses.supported import supported_losses
-from examples.models.supported import supported_featurizers, supported_classifiers
-from examples.callbacks.supported import supported_callbacks
 from examples.exp_manager.exp_manager import exp_manager
 from examples.exp_manager.logger import sr_logger
-
-from examples.audio_processing.spec_augment.compose import Compose
-from examples.algorithms.erm import SpeakerEmbeddingModel
-
+from examples.utils.factory import (
+    build_augmentor,
+    build_callbacks,
+    build_loss, 
+    build_model,
+    build_preprocessor,
+    build_spec_augmentor, 
+    read_yaml
+)
+from examples.algorithms.erm import ERM
 from speech_shifts.datasets.mlsr_dataset import MLSRDataset
-from speech_shifts.common.get_loaders import get_train_loader, get_eval_loader
-from speech_shifts.common.audio.audio_augmentor import AudioAugmentor
+from speech_shifts.common.get_loaders import (
+    get_train_loader, 
+    get_eval_loader
+)
 
 
-def read_yaml(cfg_path):
-    if cfg_path:
-        with open(cfg_path) as f:
-            cfg = yaml.load(f, Loader=yaml.FullLoader)
-        return cfg
-
-def build_spec_augmentor(spec_augmentations_config):
-    perturbations = []
-    if spec_augmentations_config:
-        for aug_type, aug_config in spec_augmentations_config.items():
-            if aug_type not in supported_spec_perturbations:
-                sr_logger.info("\N{cross mark} Spectogram augmentation of type {} does not exist.".format(aug_type))
-            else:
-                if aug_config["do_augment"]:
-                    aug_class = supported_spec_perturbations[aug_type]
-                    aug_obj = aug_class(**aug_config["params"])
-                    p = aug_config["p"]
-                    perturbations.append((p, aug_obj))
-                    sr_logger.info("\N{heavy check mark}  Spectogram augmentation of type {:^20} is turned ON.".format(aug_type))
-                else:
-                    sr_logger.info("\N{cross mark} Spectogram augmentation of type {:^20} is turned OFF.".format(aug_type))
-    composed = Compose(perturbations)
-    return composed
-    
-def build_augmentor(augmentations_config):
-    perturbations = []
-    if augmentations_config:
-        for aug_type, aug_config in augmentations_config.items():
-            if aug_type not in supported_perturbations:
-                sr_logger.info(" \N{cross mark}Audio augmentation type of {} does not exist.".format(aug_type))
-            else:
-                if aug_config["do_augment"]:
-                    aug_class = supported_perturbations[aug_type]
-                    aug_obj = aug_class(**aug_config["params"])
-                    p = aug_config["p"]
-                    perturbations.append((p, aug_obj))
-                    sr_logger.info("\N{heavy check mark}  Audio augmentation of type {:^10} is turned ON with probability {}.".format(aug_type, p))
-                else:
-                    sr_logger.info("\N{cross mark} Audio augmentation type of {:^10} is turned OFF.".format(aug_type))
-    
-    mutex_perturbations = [supported_perturbations[a] for a in ["impulse", "rir", "noise"]]
-    augmentor = AudioAugmentor(perturbations=perturbations, mutex_perturbations=mutex_perturbations)
-    return augmentor
-
-def build_preprocessor(preprocessor_config, eval=False):
-    if preprocessor_config is None:
-        raise ValueError("Preprocessor is missing.")
-    else:
-        spec_type = preprocessor_config["type"]
-        spec_params = preprocessor_config["params"]
-        spec_class = supported_preprocessors[spec_type]
-        if eval:
-            spec_params["dither"] = 0.0
-        preprocessor = spec_class(**spec_params)
-        sr_logger.info("\N{heavy check mark}  Preprocessor of type {} is CREATED.".format(type(preprocessor).__name__))
-        return preprocessor
-
-def build_loss(loss_config):
-    if loss_config is None:
-        raise ValueError("Loss is missing.")
-    else:
-        loss_type = loss_config["type"]
-        loss_params = loss_config["params"]
-        loss_class = supported_losses[loss_type]
-        loss = loss_class(**loss_params)
-        sr_logger.info("\N{heavy check mark}  Loss function of type {} is CREATED.".format(type(loss).__name__))
-        return loss
-
-def build_model(model_config, num_classess):
-    if model_config is None:
-        raise ValueError("Model is missing.")
-    else:
-        f_type = model_config["featurizer_type"]
-        c_type = model_config.get("classifier_type", None)
-        params = model_config["params"]
-        cfg = read_yaml(params["cfg_path"])
-        featurizer = supported_featurizers[f_type](**cfg["featurizer"])
-        sr_logger.info("\N{heavy check mark}  Featurizer of type {} is CREATED.".format(type(featurizer).__name__))
-
-        classifier = None
-        if c_type is not None:
-            classifier_params = cfg["classifier"]
-            classifier_params.update(params)
-            classifier_params["num_classes"] = num_classess
-            classifier = supported_classifiers[c_type](**classifier_params)
-            sr_logger.info("\N{heavy check mark}  Classifier (num_classes={}) of type {} is CREATED.".format(num_classess, type(classifier).__name__))
-        return featurizer, classifier
-
-def build_callbacks(callbacks_config, checkpoints_save_dir):
-    callbacks = []
-    if callbacks_config:
-        for call_type, call_config in callbacks_config.items():
-            if call_type not in supported_callbacks:
-                sr_logger.info("Callback type {} does not exist.".format(call_type))
-            else:
-                if call_config["do_callback"]:
-                    call_class = supported_callbacks[call_type]
-                    if call_type == 'ModelCheckpoint':
-                        call_obj = call_class(dirpath=checkpoints_save_dir, **call_config["params"])
-                    else:
-                        call_obj = call_class(**call_config["params"])
-                    callbacks.append(call_obj)
-                    sr_logger.info("\N{heavy check mark}  Callback of type {:^20} is CREATED.".format(type(call_obj).__name__))
-                else:
-                    sr_logger.info("\N{cross mark} Callback type of {:^20} is turned OFF.".format(call_type))
-
-    return callbacks
-
+def setup_env_vars():
+    os.environ['ECCL_DEBUG'] = 'INFO'
+    os.environ['NCCL_ASYNC_ERROR_HANDLING'] = '1'
+    os.environ['NCCL_P2P_DISABLE'] = '1'
 
 def build_trainer(cfg, cfg_path):
     logger_path, checkpoints_path = exp_manager(cfg_path)
@@ -183,10 +80,6 @@ def build_dataloaders(data_config, augmentor):
             (val_dataset, val_dataloader),
             (id_val_dataset, id_val_dataloader))
 
-def setup_env_vars():
-    os.environ['ECCL_DEBUG'] = 'INFO'
-    os.environ['NCCL_ASYNC_ERROR_HANDLING'] = '1'
-    os.environ['NCCL_P2P_DISABLE'] = '1'
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training speech_shifts models')
@@ -203,14 +96,15 @@ if __name__ == "__main__":
     
     loss = build_loss(cfg.get("loss", None))
     num_classes = len(set(train_dataset.y_array.tolist()))
-    featurizer, classifier = build_model(cfg.get("model", None), num_classes)
+    num_domains = len(set(train_dataset.metadata_array[:,0].numpy().tolist()))
+    featurizer, classifier, discriminator = build_model(cfg.get("model", None), num_classes, num_domains)
 
     spec_augmentor = build_spec_augmentor(read_yaml(cfg.get("spec_augmentations", None)))
     preprocessor = build_preprocessor(cfg.get("preprocessor", None))
     trainer = build_trainer(cfg, args.cfg)
 
 
-    model = SpeakerEmbeddingModel(
+    model = ERM(
         preprocessor=preprocessor,
         train_spec_augmentor=spec_augmentor,
         featurizer=featurizer,
@@ -219,8 +113,11 @@ if __name__ == "__main__":
         classifier=classifier,
     )
     
-    model.setup_dataloaders(train_dataset, 
-        train_dataloader, 
+    model.setup_train_dataloaders(
+        train_dataset, 
+        train_dataloader
+    )
+    model.setup_val_dataloaders(
         val_dataset, 
         val_dataloader, 
         id_val_dataset, 

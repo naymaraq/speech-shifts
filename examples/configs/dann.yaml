@@ -1,18 +1,26 @@
 sample_rate: &sample_rate 16000
-experiment: &experiment "./erm-log" 
+experiment: &experiment "./dann-log" 
 
 audio_augmentations: "configs/augment.yaml"
 spec_augmentations: "configs/spec_augment.yaml"
 callbacks: "configs/callbacks.yaml"
 explicit_checkpoint_path: null
 
+dann_params:
+  gamma: 10
+  epoch: &epoch 50
+  lr: &lr 0.02
+  alpha: 10
+  beta: 0.2
+  wd: &wd 0.0001
+
 data:
   root_dir: '/data/mlsr-data/cv-corpus-wav'
   params:
     n_views: 4
-    train_bs: 64
-    eval_bs: 8
-    num_workers: 30
+    train_bs: 128
+    eval_bs: 16
+    num_workers: 60
 
 # loss:
 #   type: "aam"
@@ -35,14 +43,10 @@ loss:
 optimizer:
     type: 'sgd'
     params:
-        lr: 0.08
-        weight_decay: 0.0001
-    sched:
-         type: 'CosineAnnealing'
-         params:
-            warmup_ratio: 0.4
-            min_lr: 0.005
-            max_steps: 500000
+        lr: *lr
+        momentum: 0.9
+        weight_decay: *wd
+        nesterov: True
 
 model:
   cfg_path: "configs/model_configs/titanet_medium.yaml"
@@ -53,6 +57,12 @@ model:
     #params:
       #angular: True
   
+  discriminator:
+    discriminator_type: "linear"
+    params:
+      angular: False
+    
+
 preprocessor:
   type: "mel"
   params:
@@ -70,7 +80,7 @@ preprocessor:
 
 trainer:
     devices: [0]
-    max_epochs: 250
+    max_epochs: *epoch
     strategy: 'ddp'
     accelerator: 'gpu'
     num_nodes: 1

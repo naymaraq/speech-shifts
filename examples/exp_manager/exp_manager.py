@@ -30,7 +30,7 @@ def exp_manager(config_path):
         os.makedirs(configs_versioning_path)
 
     config_name = os.path.split(config_path)[-1]
-    model_config_name = os.path.split(config['model']['params']['cfg_path'])[-1]
+    model_config_name = os.path.split(config['model']['cfg_path'])[-1]
     
     if config.get("audio_augmentations", None):
         aug_config_name = os.path.split(config['audio_augmentations'])[-1]
@@ -45,7 +45,7 @@ def exp_manager(config_path):
         copyfile(config['callbacks'], os.path.join(configs_versioning_path, callbacks_config_name))
 
     copyfile(config_path, os.path.join(configs_versioning_path, config_name))
-    copyfile(config['model']['params']['cfg_path'], os.path.join(configs_versioning_path, model_config_name))
+    copyfile(config['model']['cfg_path'], os.path.join(configs_versioning_path, model_config_name))
 
     with open(os.path.join(configs_versioning_path, "meta-info.txt"), "w") as f:
         commit_hash = get_commit_hash()

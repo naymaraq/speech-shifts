@@ -74,3 +74,6 @@ featurizer:
 
 classifier:
   feat_in: 192
+
+discriminator:
+  feat_in: 192

@@ -62,6 +62,8 @@ featurizer:
 classifier:
   feat_in: 512
 
+discriminator:
+  feat_in: 512
 
 
 
