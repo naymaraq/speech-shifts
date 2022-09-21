@@ -55,8 +55,8 @@ class BaseSpeakerEmbeddingModel(pl.LightningModule):
             
             log_text = "\n"+"-"*50
             log_text += "\nValidation results at {} step".format(self.trainer.global_step)
-            log_text += "\nValidation EER (OOD)\n\n{}\nValidation DCF (OOD)\n\n{}".format(val_eer_results_str, val_dcf_results_str)
-            log_text += "\nValidation EER (ID) \n\n{}\nValidation DCF (ID)\n\n{}".format(id_val_eer_results_str, id_val_dcf_results_str)
+            log_text += "\nValidation EER (OOD)\n{}\nValidation DCF (OOD)\n{}".format(val_eer_results_str, val_dcf_results_str)
+            log_text += "\nValidation EER (ID) \n{}\nValidation DCF (ID)\n{}".format(id_val_eer_results_str, id_val_dcf_results_str)
             log_text += "\n"+"-"*50
             sr_logger.info(log_text)
 

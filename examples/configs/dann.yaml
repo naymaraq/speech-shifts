@@ -18,7 +18,7 @@ data:
   root_dir: '/data/mlsr-data/cv-corpus-wav'
   params:
     n_views: 4
-    train_bs: 128
+    train_bs: 64
     eval_bs: 16
     num_workers: 60
 
@@ -79,7 +79,7 @@ preprocessor:
     pad_value: 0.0
 
 trainer:
-    devices: [0]
+    devices: [0, 1]
     max_epochs: *epoch
     strategy: 'ddp'
     accelerator: 'gpu'
@@ -87,4 +87,3 @@ trainer:
     sync_batchnorm: True
     precision: 16
     val_check_interval: 0.33
-

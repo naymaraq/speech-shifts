@@ -17,6 +17,7 @@ from examples.utils.factory import (
     read_yaml
 )
 from examples.algorithms.erm import ERM
+from examples.algorithms.dann import DANN
 from speech_shifts.datasets.mlsr_dataset import MLSRDataset
 from speech_shifts.common.get_loaders import (
     get_train_loader, 
@@ -83,7 +84,9 @@ def build_dataloaders(data_config, augmentor):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training speech_shifts models')
-    parser.add_argument('--cfg', type=str, help='Config Path', required=False)
+    parser.add_argument('--cfg', type=str, help='Config Path', required=True)
+    parser.add_argument('--algo', type=str, help='Algorithm Name', required=True)
+
     args = parser.parse_args()
 
     cfg = read_yaml(args.cfg)
@@ -103,15 +106,26 @@ if __name__ == "__main__":
     preprocessor = build_preprocessor(cfg.get("preprocessor", None))
     trainer = build_trainer(cfg, args.cfg)
 
-
-    model = ERM(
-        preprocessor=preprocessor,
-        train_spec_augmentor=spec_augmentor,
-        featurizer=featurizer,
-        loss=loss,
-        optim_config=cfg["optimizer"],
-        classifier=classifier,
-    )
+    if args.algo == "erm":
+        model = ERM(
+            preprocessor=preprocessor,
+            train_spec_augmentor=spec_augmentor,
+            featurizer=featurizer,
+            loss=loss,
+            optim_config=cfg["optimizer"],
+            classifier=classifier,
+        )
+    elif args.algo == "dann":
+        model = DANN(
+            preprocessor=preprocessor,
+            train_spec_augmentor=spec_augmentor,
+            featurizer=featurizer,
+            discriminator=discriminator,
+            loss=loss,
+            optim_config=cfg["optimizer"],
+            dann_params=cfg["dann_params"],
+            classifier=classifier
+        )
     
     model.setup_train_dataloaders(
         train_dataset, 
