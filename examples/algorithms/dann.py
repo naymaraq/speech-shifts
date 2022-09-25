@@ -129,6 +129,17 @@ class DANN(BaseSpeakerEmbeddingModel):
         elif dataloader_idx == 1:
             self.val_scorer(embs, indices)
 
+    def test_step(self, batch, batch_idx, dataloader_idx):
+        audio_signal, audio_signal_len, labels, metadata, indices = batch
+        processed_signal, processed_signal_length = self.preprocessor(audio_signal, audio_signal_len) 
+        _, embs = self.featurizer(processed_signal, processed_signal_length)
+        if dataloader_idx == 0:
+            self.id_val_scorer(embs, indices)
+        elif dataloader_idx == 1:
+            self.val_scorer(embs, indices)
+        elif dataloader_idx == 2:
+            self.test_scorer(embs, indices)
+        
     def configure_optimizers(self):
         model_parameter = [
             {

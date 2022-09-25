@@ -42,14 +42,13 @@ def build_trainer(cfg, cfg_path):
     )
     explicit_checkpoint_path = cfg["explicit_checkpoint_path"]
     if explicit_checkpoint_path and os.path.exists(explicit_checkpoint_path):
-        sr_logger.info(f"Loading pytorch checkpoint from {explicit_checkpoint_path}")
         loaded_checkpoint = torch.load(explicit_checkpoint_path)
         trainer.fit_loop.global_step = loaded_checkpoint['global_step']
         trainer.fit_loop.current_epoch = loaded_checkpoint['epoch']
     
     sr_logger.info("\N{heavy check mark}  Logger of type {} is CREATED.".format(type(logger).__name__))
     sr_logger.info("\N{heavy check mark}  Trainer of type {} is CREATED.".format(type(trainer).__name__))
-    return trainer
+    return trainer, explicit_checkpoint_path
 
 def build_dataloaders(data_config, augmentor):
     if data_config is None:
@@ -69,7 +68,7 @@ def build_dataloaders(data_config, augmentor):
     train_bs = params["train_bs"]
     num_workers = params["num_workers"]
     val_dataloader = get_eval_loader("standard", val_dataset, batch_size=eval_bs, num_workers=num_workers, pin_memory=True)
-    #test_dataloader = get_eval_loader("standard", test_dataset, batch_size=eval_bs, num_workers=num_workers, pin_memory=True)
+    test_dataloader = get_eval_loader("standard", test_dataset, batch_size=eval_bs, num_workers=num_workers, pin_memory=True)
     id_val_dataloader = get_eval_loader("standard", id_val_dataset, batch_size=eval_bs, num_workers=num_workers, pin_memory=True)
     train_dataloader = get_train_loader("standard", train_dataset, batch_size=train_bs, num_workers=num_workers, pin_memory=True)
 
@@ -79,13 +78,15 @@ def build_dataloaders(data_config, augmentor):
 
     return ((train_dataset, train_dataloader), 
             (val_dataset, val_dataloader),
-            (id_val_dataset, id_val_dataloader))
+            (id_val_dataset, id_val_dataloader),
+            (test_dataset, test_dataloader))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training speech_shifts models')
     parser.add_argument('--cfg', type=str, help='Config Path', required=True)
     parser.add_argument('--algo', type=str, help='Algorithm Name', required=True)
+    parser.add_argument('--mode', type=str, help='Train or Inference', required=True)
 
     args = parser.parse_args()
 
@@ -93,9 +94,13 @@ if __name__ == "__main__":
     setup_env_vars()
 
     augmentor = build_augmentor(read_yaml(cfg.get("audio_augmentations", None)))
+    if args.mode == "test":
+        augmentor = None
+    
     ((train_dataset, train_dataloader), 
      (val_dataset, val_dataloader),
-     (id_val_dataset, id_val_dataloader)) = build_dataloaders(cfg.get("data", None), augmentor)
+     (id_val_dataset, id_val_dataloader),
+     (test_dataset, test_dataloader)) = build_dataloaders(cfg.get("data", None), augmentor)
     
     loss = build_loss(cfg.get("loss", None))
     num_classes = len(set(train_dataset.y_array.tolist()))
@@ -104,40 +109,59 @@ if __name__ == "__main__":
 
     spec_augmentor = build_spec_augmentor(read_yaml(cfg.get("spec_augmentations", None)))
     preprocessor = build_preprocessor(cfg.get("preprocessor", None))
-    trainer = build_trainer(cfg, args.cfg)
+    trainer, explicit_checkpoint_path = build_trainer(cfg, args.cfg)
 
     if args.algo == "erm":
-        model = ERM(
-            preprocessor=preprocessor,
-            train_spec_augmentor=spec_augmentor,
-            featurizer=featurizer,
-            loss=loss,
-            optim_config=cfg["optimizer"],
-            classifier=classifier,
+        erm_params = dict(preprocessor=preprocessor,
+                train_spec_augmentor=spec_augmentor,
+                featurizer=featurizer,
+                loss=loss,
+                optim_config=cfg["optimizer"],
+                classifier=classifier
         )
+        if explicit_checkpoint_path and os.path.exists(explicit_checkpoint_path):
+            sr_logger.info(f"Loading pytorch checkpoint from {explicit_checkpoint_path}")
+            model = ERM.load_from_checkpoint(explicit_checkpoint_path, **erm_params)
+        else:
+            model = ERM(**erm_params)
+        
     elif args.algo == "dann":
-        model = DANN(
-            preprocessor=preprocessor,
+        dann_params = dict(preprocessor=preprocessor,
             train_spec_augmentor=spec_augmentor,
             featurizer=featurizer,
             discriminator=discriminator,
             loss=loss,
             optim_config=cfg["optimizer"],
             dann_params=cfg["dann_params"],
-            classifier=classifier
-        )
+            classifier=classifier)
+        
+        if explicit_checkpoint_path and os.path.exists(explicit_checkpoint_path):
+            sr_logger.info(f"Loading pytorch checkpoint from {explicit_checkpoint_path}")
+            model = DANN.load_from_checkpoint(explicit_checkpoint_path, **dann_params)
+        else:
+            model = DANN(**dann_params)
     
-    model.setup_train_dataloaders(
-        train_dataset, 
-        train_dataloader
-    )
-    model.setup_val_dataloaders(
-        val_dataset, 
-        val_dataloader, 
-        id_val_dataset, 
-        id_val_dataloader
-    )
+    if args.mode == "train":
+        model.setup_train_dataloaders(
+            train_dataset, 
+            train_dataloader
+        )
+        model.setup_val_dataloaders(
+            val_dataset, 
+            val_dataloader, 
+            id_val_dataset, 
+            id_val_dataloader
+        )
+        trainer.fit(model)
+    elif args.mode == "test":
+        model.setup_test_dataloaders(val_dataset, 
+            val_dataloader, 
+            id_val_dataset, 
+            id_val_dataloader,
+            test_dataset,
+            test_dataloader)
+        
+        trainer.test(model)
 
-    trainer.fit(model)
 
 

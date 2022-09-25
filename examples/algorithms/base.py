@@ -10,6 +10,31 @@ class BaseSpeakerEmbeddingModel(pl.LightningModule):
     def val_dataloader(self):
         return self._val_dls
     
+    def test_dataloader(self):
+        return self._test_dls
+    
+    def setup_test_dataloaders(self, 
+                              val_dataset, 
+                              val_dataloader, 
+                              id_val_dataset, 
+                              id_val_dataloader,
+                              test_dataset,
+                              test_dataloader):
+
+        self.val_dataset = val_dataset
+        self.id_val_dataset = id_val_dataset
+        self.test_dataset = test_dataset
+        self._test_dls = [id_val_dataloader, val_dataloader, test_dataloader]
+        self.id_val_scorer = CosineScorer(input_trial_array=self.id_val_dataset.input_trial_array, 
+                                          index2path=self.id_val_dataset._index2path)
+        self.id_val_scorer.disable_compute()
+        self.val_scorer = CosineScorer(input_trial_array=self.val_dataset.input_trial_array, 
+                                          index2path=self.val_dataset._index2path)
+        self.val_scorer.disable_compute()
+        self.test_scorer = CosineScorer(input_trial_array=self.test_dataset.input_trial_array, 
+                                        index2path=self.test_dataset._index2path)
+        self.test_scorer.disable_compute()
+
     def setup_val_dataloaders(self, 
                               val_dataset, 
                               val_dataloader, 
@@ -25,6 +50,52 @@ class BaseSpeakerEmbeddingModel(pl.LightningModule):
         self.val_scorer = CosineScorer(input_trial_array=self.val_dataset.input_trial_array, 
                                           index2path=self.val_dataset._index2path)
         self.val_scorer.disable_compute()
+
+
+    def test_epoch_end(self, outputs):
+        if not self.trainer.sanity_checking:
+            self.id_val_scorer.enable_compute()
+            self.val_scorer.enable_compute()
+            self.test_scorer.enable_compute()
+
+            id_val_y_pred, id_val_y_true = self.id_val_scorer.compute()
+            val_y_pred, val_y_true = self.val_scorer.compute()
+            test_y_pred, test_y_true = self.test_scorer.compute()
+            
+            self.id_val_scorer.disable_compute()
+            self.val_scorer.disable_compute()
+            self.test_scorer.disable_compute()
+
+            self.id_val_scorer.reset()
+            self.val_scorer.reset()
+            self.test_scorer.reset()
+
+            (val_eer_results, val_eer_results_str, 
+             val_dcf_results, val_dcf_results_str) = self.val_dataset.eval(
+                val_y_pred, 
+                val_y_true, 
+                self.val_dataset.trial_metadata_array
+            )
+            (id_val_eer_results, id_val_eer_results_str, 
+             id_val_dcf_results, id_val_dcf_results_str) = self.id_val_dataset.eval(
+                id_val_y_pred, 
+                id_val_y_true, 
+                self.id_val_dataset.trial_metadata_array
+            )
+
+            (test_eer_results, test_eer_results_str, 
+             test_dcf_results, test_dcf_results_str) = self.test_dataset.eval(
+                test_y_pred, 
+                test_y_true, 
+                self.test_dataset.trial_metadata_array
+            )
+
+            log_text = "\n"+"-"*50
+            log_text += "\nValidation EER (OOD)\n{}\nValidation DCF (OOD)\n{}".format(val_eer_results_str, val_dcf_results_str)
+            log_text += "\nValidation EER (ID) \n{}\nValidation DCF (ID)\n{}".format(id_val_eer_results_str, id_val_dcf_results_str)
+            log_text += "\nTest EER \n{}\nTest DCF \n{}".format(test_eer_results_str, test_dcf_results_str)
+            log_text += "\n"+"-"*50
+            sr_logger.info(log_text)
 
 
     def validation_epoch_end(self, outputs):
