@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 
 from examples.algorithms.cosine_scorer import CosineScorer
 from examples.exp_manager.logger import sr_logger
+from examples.exp_manager.exp_utils import is_global_rank_zero
 
 class BaseSpeakerEmbeddingModel(pl.LightningModule):
     def __init__(self, *args, **kwargs):
@@ -90,12 +91,13 @@ class BaseSpeakerEmbeddingModel(pl.LightningModule):
                 self.test_dataset.trial_metadata_array
             )
 
-            log_text = "\n"+"-"*50
-            log_text += "\nValidation EER (OOD)\n{}\nValidation DCF (OOD)\n{}".format(val_eer_results_str, val_dcf_results_str)
-            log_text += "\nValidation EER (ID) \n{}\nValidation DCF (ID)\n{}".format(id_val_eer_results_str, id_val_dcf_results_str)
-            log_text += "\nTest EER \n{}\nTest DCF \n{}".format(test_eer_results_str, test_dcf_results_str)
-            log_text += "\n"+"-"*50
-            sr_logger.info(log_text)
+            if is_global_rank_zero():
+                log_text = "\n"+"-"*50
+                log_text += "\nValidation EER (OOD)\n{}\nValidation DCF (OOD)\n{}".format(val_eer_results_str, val_dcf_results_str)
+                log_text += "\nValidation EER (ID) \n{}\nValidation DCF (ID)\n{}".format(id_val_eer_results_str, id_val_dcf_results_str)
+                log_text += "\nTest EER \n{}\nTest DCF \n{}".format(test_eer_results_str, test_dcf_results_str)
+                log_text += "\n"+"-"*50
+                sr_logger.info(log_text)
 
 
     def validation_epoch_end(self, outputs):
@@ -124,12 +126,13 @@ class BaseSpeakerEmbeddingModel(pl.LightningModule):
                 self.id_val_dataset.trial_metadata_array
             )
             
-            log_text = "\n"+"-"*50
-            log_text += "\nValidation results at {} step".format(self.trainer.global_step)
-            log_text += "\nValidation EER (OOD)\n{}\nValidation DCF (OOD)\n{}".format(val_eer_results_str, val_dcf_results_str)
-            log_text += "\nValidation EER (ID) \n{}\nValidation DCF (ID)\n{}".format(id_val_eer_results_str, id_val_dcf_results_str)
-            log_text += "\n"+"-"*50
-            sr_logger.info(log_text)
+            if is_global_rank_zero():
+                log_text = "\n"+"-"*50
+                log_text += "\nValidation results at {} step".format(self.trainer.global_step)
+                log_text += "\nValidation EER (OOD)\n{}\nValidation DCF (OOD)\n{}".format(val_eer_results_str, val_dcf_results_str)
+                log_text += "\nValidation EER (ID) \n{}\nValidation DCF (ID)\n{}".format(id_val_eer_results_str, id_val_dcf_results_str)
+                log_text += "\n"+"-"*50
+                sr_logger.info(log_text)
 
 
             for res, name in [(val_eer_results,"EER"), (id_val_eer_results, "EER"),
@@ -140,6 +143,7 @@ class BaseSpeakerEmbeddingModel(pl.LightningModule):
                 zero_eer_keys = [f"{name}_lang:"+key.split(":")[-1] for key in zero_count_keys]
                 for k in count_keys + zero_eer_keys + other_keys:
                     del res[k]
+
 
             self.log("validation_eer (OOD)", val_eer_results, prog_bar=False, logger=True, sync_dist=True)
             self.log("validation_dcf (OOD)", val_dcf_results, prog_bar=False, logger=True, sync_dist=True)
