@@ -14,10 +14,34 @@ import torch
 from speech_shifts.datasets.mlsr_dataset import MLSRDataset
 from speech_shifts.common.metrics.sv_metrics import EqualErrorRate, DCF
 from speech_shifts.common.get_loaders import get_train_loader, get_eval_loader
+from speech_shifts.common.grouper import CombinatorialGrouper
 
 class MLSRDatasetTest(unittest.TestCase):
     root_dir = "/data/mlsr-data/cv-corpus-wav"
     
+    def test_group_loader(self):
+        d = MLSRDataset(self.root_dir)
+        train = d.get_mixed_train_subset(["train", "rw-train"], loader_kwargs={"n_views": 2})
+        
+        grouper = CombinatorialGrouper(
+            meta_fields=train._metadata_fields, 
+            meta_map=train._metadata_map,
+            meta_array=train.metadata_array, 
+            groupby_fields=['lang']
+        )
+        n_groups_per_batch = 6
+        train_loader  = get_train_loader("group",
+                                         train,
+                                         batch_size=60,
+                                         uniform_over_groups=True,
+                                         grouper=grouper,
+                                         distinct_groups=True,
+                                         n_groups_per_batch=n_groups_per_batch,
+                                        )
+        audio_signal, audio_lengths, labels, metadata, indices = next(iter(train_loader))
+        self.assertEqual(len(set(metadata[:, 0].tolist())), n_groups_per_batch)
+
+
     def test_other(self):
         d = MLSRDataset(self.root_dir)
         zh_CN_train = d.get_subset("zh-CN-train", loader_kwargs={"n_views": 1})
